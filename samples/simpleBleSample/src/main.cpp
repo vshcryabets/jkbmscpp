@@ -30,11 +30,11 @@ int main() {
         
         std::cout << "Using adapter: " << adapter.identifier() << std::endl;
         
-        // Start scanning for 15 seconds
-        std::cout << "Starting BLE scan for 15 seconds..." << std::endl;
+        // Start scanning for 5 seconds
+        std::cout << "Starting BLE scan for 5 seconds..." << std::endl;
         
         adapter.scan_start();
-        std::this_thread::sleep_for(std::chrono::seconds(15));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         adapter.scan_stop();
         
         // Get scan results
@@ -43,18 +43,22 @@ int main() {
         std::cout << "Found " << peripherals.size() << " BLE device(s):" << std::endl;
 
         std::cout << "\t0). Exit" << std::endl;
+        int autoJkBms = 0;
         for (size_t i = 0; i < peripherals.size(); i++) {
             auto& peripheral = peripherals[i];
             std::string name = peripheral.identifier().empty() ? "Unknown" : peripheral.identifier();
             std::cout << "\t" << i + 1 << "). " << name 
                 << " (" << peripheral.address() << ")" 
                 << std::endl;
+            if (name.find("JK_BD") != std::string::npos) {
+                autoJkBms = static_cast<int>(i + 1);
+            }
         }
 
         std::cout << "Select a device to connect to (0 to exit): ";
-        size_t choice;
-        std::cin >> choice;
-        if (choice == 0) {
+        size_t choice = autoJkBms;
+        // std::cin >> choice;
+        if (choice < 1) {
             std::cout << "Exiting..." << std::endl;
             return 0;
         }
