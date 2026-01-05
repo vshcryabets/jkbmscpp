@@ -3,6 +3,7 @@
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
 #endif
+#include "CppWrappers.h"
 
 namespace JkBmsCpp {
 #ifdef JKBMSCPP_USE_STD_STRING    
@@ -44,6 +45,22 @@ namespace JkBmsCpp {
         virtual size_t getMtu() = 0;
     };
 
+    class JkBmsDeviceInfoResponse {
+        public:
+            JkBmsString vendorId;
+            JkBmsString hwVersion;
+            JkBmsString swVersion;
+            uint32_t uptimeSeconds;
+            uint32_t powerOnCounter;
+            JkBmsString deviceName;
+            JkBmsString devicePasscode;
+            JkBmsString manufacturedate;
+            JkBmsString serialNumber;
+            JkBmsString passcode;
+            JkBmsString userData;
+            JkBmsString setupPasscode;
+    };
+
     class JkBmsController
     {
     public:
@@ -56,12 +73,13 @@ namespace JkBmsCpp {
             const uint8_t* data,
             const uint16_t size);
         void handleResponse(const uint8_t* data, const uint16_t size);
+        uint8_t calculateChecksum(const uint8_t* data, const uint16_t size);
     public:
         JkBmsController();
         virtual void start(JkBmsSource* source);
         virtual void end();
         ~JkBmsController();
-        virtual JkBmsControllerError readDeviceState();
+        virtual Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> readDeviceState();
     };
 
 };

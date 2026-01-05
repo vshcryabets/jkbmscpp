@@ -13,6 +13,7 @@ target_include_directories(libjkbmscpp PUBLIC
 
 target_sources(libjkbmscpp PRIVATE
     src/JkBmsController.cpp
+    src/JkBmsTools.cpp
 )
 
 if(USE_STD_STRING)
