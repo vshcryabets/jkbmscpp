@@ -74,6 +74,7 @@ int main() {
         
         controller.start(&source);
         std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
+        controller.readDeviceState();
         std::this_thread::sleep_for(std::chrono::seconds(15));
         controller.end();
     } catch (const std::exception& e) {
