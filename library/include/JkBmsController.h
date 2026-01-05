@@ -1,3 +1,4 @@
+#include <cstdint>
 #pragma once
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
