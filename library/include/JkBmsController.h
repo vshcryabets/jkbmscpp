@@ -6,10 +6,17 @@
 namespace JkBmsCpp {
 #ifdef JKBMSCPP_USE_STD_STRING    
     typedef std::string JkBmsString;
+#else
+    typedef const char* JkBmsString;
 #endif
 
-    enum JkBmsSourceError {
+    enum class JkBmsSourceError: uint8_t {
         SUCCESS = 0,
+    };
+
+    enum class JkBmsControllerError: uint8_t {
+        SUCCESS = 0,
+        ERROR_NO_SOURCE = 1,
     };
 
     class JkBmsSource {
@@ -26,8 +33,8 @@ namespace JkBmsCpp {
         virtual JkBmsSourceError subscribe(
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid,
-            const void* context,
-            void(*callback)(const void* context, const uint8_t* data, const uint16_t size)
+            void* context,
+            void(*callback)(void* context, const uint8_t* data, const uint16_t size)
         ) = 0;
         virtual JkBmsSourceError unsubscribe(
             const JkBmsString& service_uuid,
@@ -44,7 +51,7 @@ namespace JkBmsCpp {
     private:
         JkBmsSource* source;
         static void notificationCallback(
-            const void* ctx,
+            void* ctx,
             const uint8_t* data,
             const uint16_t size);
         void handleResponse(const uint8_t* data, const uint16_t size);
@@ -53,7 +60,7 @@ namespace JkBmsCpp {
         virtual void start(JkBmsSource* source);
         virtual void end();
         ~JkBmsController();
-        virtual void readDeviceState();
+        virtual JkBmsControllerError readDeviceState();
     };
 
 };

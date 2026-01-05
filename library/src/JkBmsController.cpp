@@ -23,7 +23,6 @@ void JkBmsController::start(JkBmsSource* source)
 {
     this->source = source;
     this->source->connect();
-    std::cout << "TA mtu=" << this->source->getMtu() << std::endl;
     this->source->subscribe(
         SERVICE_UUID,
         CHARACTERISTIC_UUID,
@@ -43,8 +42,12 @@ void JkBmsController::end()
     }
 }
 
-void JkBmsController::readDeviceState()
+JkBmsControllerError JkBmsController::readDeviceState()
 {
+    if (source == nullptr) {
+        std::cerr << "Source is not started" << std::endl;
+        return JkBmsControllerError::ERROR_NO_SOURCE;
+    }
     uint8_t frame[20];
     uint8_t length = 0;
     uint32_t value = 0;
@@ -73,13 +76,14 @@ void JkBmsController::readDeviceState()
     }
     frame[19] = crc;
     source->sendCommand(frame, sizeof(frame), SERVICE_UUID, CHARACTERISTIC_UUID);
+    return JkBmsControllerError::SUCCESS;
 }
 
 void JkBmsController::notificationCallback(
-            const void* ctx,
+            void* ctx,
             const uint8_t* data,
             const uint16_t size) {
-    JkBmsController* controller = (JkBmsController*)ctx;
+    JkBmsController* controller = static_cast<JkBmsController*>(ctx);
     controller->handleResponse(data, size);
 }
 

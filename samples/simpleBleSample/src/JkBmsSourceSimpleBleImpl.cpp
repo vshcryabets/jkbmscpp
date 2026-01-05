@@ -23,18 +23,6 @@ JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::sendCommand(
 
 JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::connect() {
     peripheral.connect();
-
-
-
-    // // list services for debug purposes
-    // auto services = peripheral.services();
-    // for (auto& service : services) {
-    //     std::cout << "Service: " << service.uuid() << std::endl;
-    //     auto characteristics = service.characteristics();
-    //     for (auto& characteristic : characteristics) {
-    //         std::cout << "\tCharacteristic: " << characteristic.uuid() << std::endl;
-    //     }
-    // }
     return JkBmsCpp::JkBmsSourceError::SUCCESS;
 }
 
@@ -50,8 +38,8 @@ size_t JkBmsSourceSimpleBleImpl::getMtu() {
 JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::subscribe(
     const JkBmsCpp::JkBmsString& service_uuid,
     const JkBmsCpp::JkBmsString& char_uuid,
-    const void* context,
-    void(*callback)(const void* context, const uint8_t* data, const uint16_t size)
+    void* context,
+    void(*callback)(void* context, const uint8_t* data, const uint16_t size)
 ) {
     peripheral.notify(service_uuid, 
         char_uuid, [callback, context](SimpleBLE::ByteArray bytes) {
