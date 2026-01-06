@@ -1,5 +1,12 @@
 #pragma once
 
+#include <cstdint>
+#include <cstddef>
+
+#ifdef JKBMSCPP_USE_STD_STRING
+#include <string>
+#endif
+
 namespace JkBmsCpp {
     template<typename T, typename E>
     class Expected {
@@ -22,5 +29,23 @@ namespace JkBmsCpp {
                     _error.~E();
                 }
             }
+    };
+
+#ifdef JKBMSCPP_USE_STD_STRING    
+    typedef std::string JkBmsString;
+#else
+    typedef const char* JkBmsString;
+#endif
+
+    class JkBmsDataBuffer {
+        private:
+            uint8_t* _data;
+            size_t _size;
+        public:
+            JkBmsDataBuffer(uint8_t* data, size_t size)
+                : _data(data), _size(size) {}
+            ~JkBmsDataBuffer() = default;
+            uint8_t* data() { return _data; }
+            size_t size() { return _size; }            
     };
 }

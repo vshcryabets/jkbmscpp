@@ -1,25 +1,9 @@
-#include <cstdint>
 #pragma once
-#ifdef JKBMSCPP_USE_STD_STRING
-#include <string>
-#endif
+
+#include "JkBmsFrames.h"
 #include "CppWrappers.h"
 
 namespace JkBmsCpp {
-#ifdef JKBMSCPP_USE_STD_STRING    
-    typedef std::string JkBmsString;
-#else
-    typedef const char* JkBmsString;
-#endif
-
-    enum class JkBmsSourceError: uint8_t {
-        SUCCESS = 0,
-    };
-
-    enum class JkBmsControllerError: uint8_t {
-        SUCCESS = 0,
-        ERROR_NO_SOURCE = 1,
-    };
 
     class JkBmsSource {
     public:
@@ -43,22 +27,6 @@ namespace JkBmsCpp {
             const JkBmsString& char_uuid
         ) = 0;
         virtual size_t getMtu() = 0;
-    };
-
-    class JkBmsDeviceInfoResponse {
-        public:
-            JkBmsString vendorId;
-            JkBmsString hwVersion;
-            JkBmsString swVersion;
-            uint32_t uptimeSeconds;
-            uint32_t powerOnCounter;
-            JkBmsString deviceName;
-            JkBmsString devicePasscode;
-            JkBmsString manufacturedate;
-            JkBmsString serialNumber;
-            JkBmsString passcode;
-            JkBmsString userData;
-            JkBmsString setupPasscode;
     };
 
     class JkBmsController
