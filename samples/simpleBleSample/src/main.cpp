@@ -75,7 +75,7 @@ int main() {
         controller.start(&source);
         std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
         auto result = controller.readDeviceState();
-        if (result.has_value()) {
+        if (result.hasValue()) {
             std::cout << "Read device state successfully." << std::endl;
         } else {
             std::cout << "Failed to read device state. Error code: " 
