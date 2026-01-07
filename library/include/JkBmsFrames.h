@@ -10,6 +10,14 @@ namespace JkBmsCpp {
     enum class JkBmsControllerError: uint8_t {
         SUCCESS = 0,
         ERROR_NO_SOURCE = 1,
+        CRC_MISMATCH = 2,
+        INVALID_MAGIC_BYTES = 3,
+        INVALID_RESPONSE_TYPE = 4,
+    };
+
+    enum class JkBmsResponseType: uint8_t {
+        CELL_INFO = 0x02,
+        DEVICE_INFO = 0x03,
     };
 
     class JkBmsDeviceInfoResponse {
@@ -30,6 +38,6 @@ namespace JkBmsCpp {
 
     bool checkFrameStart(JkBmsDataBuffer);
     bool checkFrameChecksum(JkBmsDataBuffer);
-    JkBmsDeviceInfoResponse parseDeviceInfo(JkBmsDataBuffer);
+    Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(JkBmsDataBuffer);
 
 };
