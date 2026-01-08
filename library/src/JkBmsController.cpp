@@ -52,6 +52,44 @@ uint8_t JkBmsController::calculateChecksum(const JkBmsDataBuffer& data) {
     return crc;
 }
 
+CellInfoFuture JkBmsController::readCellsState() {
+    pendingCellInfoRequest = std::make_unique<CellInfoPromise>();
+    if (source == nullptr) {
+        std::cerr << "Source is not started" << std::endl;
+        pendingCellInfoRequest->set_value(
+            Expected<JkBmsCellInfoResponse, JkBmsControllerError>(
+                JkBmsControllerError::ERROR_NO_SOURCE));
+        return pendingCellInfoRequest->get_future();
+    }
+    uint8_t frame[20];
+    JkBmsDataBuffer command(frame, sizeof(frame));
+    uint8_t length = 0;
+    uint32_t value = 0;
+    frame[0] = 0xAA;     // start sequence
+    frame[1] = 0x55;     // start sequence
+    frame[2] = 0x90;     // start sequence
+    frame[3] = 0xEB;     // start sequence
+    frame[4] = 0x96;  // holding register
+    frame[5] = length;   // size of the value in byte
+    frame[6] = value >> 0;
+    frame[7] = value >> 8;
+    frame[8] = value >> 16;
+    frame[9] = value >> 24;
+    frame[10] = 0x00;
+    frame[11] = 0x00;
+    frame[12] = 0x00;
+    frame[13] = 0x00;
+    frame[14] = 0x00;
+    frame[15] = 0x00;
+    frame[16] = 0x00;
+    frame[17] = 0x00;
+    frame[18] = 0x00;
+    frame[19] = calculateChecksum(command);
+    responseBuffer.clear();
+    source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
+    return pendingCellInfoRequest->get_future();
+}
+
 DeviceInfoFuture JkBmsController::readDeviceState()
 {
     pendingDeviceInfoRequest = std::make_unique<DeviceInfoPromise>();

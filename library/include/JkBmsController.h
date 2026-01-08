@@ -12,6 +12,9 @@ namespace JkBmsCpp {
     typedef std::future<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoFuture;
     typedef std::promise<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoPromise;
 
+    typedef std::future<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoFuture;
+    typedef std::promise<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoPromise;
+
     class JkBmsSource {
     public:
         virtual ~JkBmsSource() = default;
@@ -46,6 +49,7 @@ namespace JkBmsCpp {
         JkBmsSource* source;
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
+        std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;
 
         static void notificationCallback(
             void* ctx,
@@ -58,6 +62,7 @@ namespace JkBmsCpp {
         virtual void end();
         ~JkBmsController();
         virtual DeviceInfoFuture readDeviceState();
+        virtual CellInfoFuture readCellsState();
     };
 
 };

@@ -2,6 +2,72 @@
 
 namespace JkBmsCpp {
 
+    Expected<JkBmsCellInfoResponse, JkBmsControllerError> parseCellsInfo(
+        const JkBmsDataBuffer& buffer) {
+        if (!checkFrameStart(buffer)) {
+            return JkBmsControllerError::INVALID_MAGIC_BYTES;
+        }
+        if (!checkFrameChecksum(buffer)) {
+            return JkBmsControllerError::CRC_MISMATCH;
+        }
+        if (buffer.size() != 300) {
+            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        }
+        char* data = (char*)buffer.data();
+        if (buffer.data()[4] != static_cast<uint8_t>(JkBmsResponseType::CELL_INFO)) {
+            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        }
+        JkBmsCellInfoResponse response;
+        // read cell voltages
+        for (size_t i = 0; i < JkBmsCellInfoResponse::CELL_COUNT; i++) {
+            response.cellVoltages_mV[i] = (uint8_t)data[6 + i * 2] | 
+                ((uint8_t)data[7 + i * 2] << 8);
+        }
+
+        response.enabledCellMask = (uint8_t)data[70] | 
+            ((uint8_t)data[71] << 8) | 
+            ((uint8_t)data[72] << 16) | 
+            ((uint8_t)data[73] << 24);
+
+        for (size_t i = 0; i < JkBmsCellInfoResponse::CELL_COUNT; i++) {
+            response.cellResistances_mOhm[i] = (uint8_t)data[80 + i * 2] | 
+                ((uint8_t)data[81 + i * 2] << 8);
+        }
+        response.powerTubeTemperature = (uint8_t)data[144] | 
+            ((uint8_t)data[145] << 8);
+        response.wireResistanceWarningMask = (uint8_t)data[146] | 
+            ((uint8_t)data[147] << 8) | 
+            ((uint8_t)data[148] << 16) | 
+            ((uint8_t)data[149] << 24);
+        response.batteryVoltage_mV = (uint8_t)data[150] |
+            ((uint8_t)data[151] << 8) | 
+            ((uint8_t)data[152] << 16) | 
+            ((uint8_t)data[153] << 24);
+        response.chargeCurrent_mA = (int8_t)data[158] | 
+            ((int8_t)data[159] << 8) | 
+            ((int8_t)data[160] << 16) | 
+            ((int8_t)data[161] << 24);
+        response.temperatureSensor1 = (uint8_t)data[162] | 
+            ((uint8_t)data[163] << 8);
+        response.temperatureSensor2 = (uint8_t)data[164] | 
+            ((uint8_t)data[165] << 8);
+        response.errorsMask = (uint8_t)data[166] | 
+            ((uint8_t)data[167] << 8);
+        response.balanceCurrent_mA = (uint8_t)data[168] | 
+            ((uint8_t)data[169] << 8);
+        response.balanceAction = data[170];
+        response.batteryPercentage = data[173];
+        response.remainingCapacity_mAh = (uint8_t)data[174] |
+            ((uint8_t)data[175] << 8) | 
+            ((uint8_t)data[176] << 16) | 
+            ((uint8_t)data[177] << 24);
+        response.fullCapacity_mAh = (uint8_t)data[178] |
+            ((uint8_t)data[179] << 8) | 
+            ((uint8_t)data[180] << 16) | 
+            ((uint8_t)data[181] << 24);
+        return response;
+    }
+
     Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
         const JkBmsDataBuffer& buffer) {
         if (!checkFrameStart(buffer)) {

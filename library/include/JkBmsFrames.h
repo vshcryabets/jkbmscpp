@@ -21,6 +21,34 @@ namespace JkBmsCpp {
         DEVICE_INFO = 0x03,
     };
 
+    class JkBmsCellInfoResponse {
+        public:
+            constexpr static size_t CELL_COUNT = 32;
+            uint16_t cellVoltages_mV[CELL_COUNT];
+            uint32_t enabledCellMask;
+            uint16_t cellResistances_mOhm[CELL_COUNT];
+            int16_t powerTubeTemperature;
+            uint32_t wireResistanceWarningMask;
+            uint32_t batteryVoltage_mV;
+            uint32_t batteryPower_mW;
+            int32_t chargeCurrent_mA;
+            int16_t temperatureSensor1;
+            int16_t temperatureSensor2;
+            uint16_t errorsMask;
+            int16_t balanceCurrent_mA;
+            uint8_t balanceAction;
+            uint8_t batteryPercentage;
+            uint32_t remainingCapacity_mAh;
+            uint32_t fullCapacity_mAh;
+            uint32_t cycleCount;
+            uint32_t totalCycleCapacity_mAh;
+            uint8_t sohPercentage;
+            uint32_t totalRunTime;
+            uint8_t chargingState;
+            uint8_t dischargingState;
+            uint16_t emergencyTimeCountdown_s;
+    };
+
     class JkBmsDeviceInfoResponse {
         public:
             JkBmsString vendorId;
@@ -45,5 +73,9 @@ namespace JkBmsCpp {
     Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
         const JkBmsDataBuffer& buffer
     );
+    Expected<JkBmsCellInfoResponse, JkBmsControllerError> parseCellsInfo(
+        const JkBmsDataBuffer& buffer
+    );
+    
 
 };
