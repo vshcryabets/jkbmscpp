@@ -20,24 +20,24 @@ namespace JkBmsCpp {
         JkBmsDeviceInfoResponse response;
         // Parsing logic to extract fields from buffer
         // This is a placeholder implementation
-        response.vendorId = JkBmsString(data + 6, 16);
-        response.hwVersion = JkBmsString(data + 22, 8);
-        response.swVersion = JkBmsString(data + 30, 8);
-        response.uptimeSeconds = data[38] | 
-            (data[39] << 8) | 
-            (data[40] << 16) | 
-            (data[41] << 24);
+        response.vendorId = JkBmsString(data + 6, strnlen(data + 6, 16));
+        response.hwVersion = JkBmsString(data + 22, strnlen(data + 22, 8));
+        response.swVersion = JkBmsString(data + 30, strnlen(data + 30, 8));
+        response.uptimeSeconds = (uint8_t)data[38] |
+            ((uint8_t)data[39] << 8) | 
+            ((uint8_t)data[40] << 16) | 
+            ((uint8_t)data[41] << 24);
         response.powerOnCounter = data[42] | 
             (data[43] << 8) | 
             (data[44] << 16) | 
             (data[45] << 24);
-        response.deviceName = JkBmsString(data + 46, 16);
-        response.devicePasscode = JkBmsString(data + 62, 16);
-        response.manufacturedate = JkBmsString(data + 78, 8);
-        response.serialNumber = JkBmsString(data + 86, 11);
-        response.passcode = JkBmsString(data + 97, 5);
-        response.userData = JkBmsString(data + 102, 16);
-        response.setupPasscode = JkBmsString(data + 118, 16);
+        response.deviceName = JkBmsString(data + 46, strnlen(data + 46, 16));
+        response.devicePasscode = JkBmsString(data + 62, strnlen(data + 62, 16));
+        response.manufacturedate = JkBmsString(data + 78, strnlen(data + 78, 8));
+        response.serialNumber = JkBmsString(data + 86, strnlen(data + 86, 11));
+        response.passcode = JkBmsString(data + 97, strnlen(data + 97, 5));
+        response.userData = JkBmsString(data + 102, strnlen(data + 102, 16));
+        response.setupPasscode = JkBmsString(data + 118, strnlen(data + 118, 16));
         return response;
     }
 
