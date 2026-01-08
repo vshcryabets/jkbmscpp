@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <vector>
 
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
@@ -19,6 +20,13 @@ namespace JkBmsCpp {
         public:
             Expected(const T& val) : _value(val), _has_value(true) {}
             Expected(const E& err) : _error(err), _has_value(false) {}
+            Expected(const Expected& other) : _has_value(other._has_value) {
+                if (_has_value) {
+                    new(&_value) T(other._value);
+                } else {
+                    new(&_error) E(other._error);
+                }
+            }
             bool hasValue() const { return _has_value; }
             const T& value() const { return _value; }
             const E& error() const { return _error; }
@@ -37,6 +45,8 @@ namespace JkBmsCpp {
     typedef const char* JkBmsString;
 #endif
 
+    typedef std::vector<uint8_t> JkBmsByteBuffer;
+
     class JkBmsDataBuffer {
         private:
             uint8_t* _data;
@@ -45,7 +55,7 @@ namespace JkBmsCpp {
             JkBmsDataBuffer(uint8_t* data, size_t size)
                 : _data(data), _size(size) {}
             ~JkBmsDataBuffer() = default;
-            uint8_t* data() { return _data; }
-            size_t size() { return _size; }            
+            const uint8_t* data() const { return _data; }
+            size_t size() const { return _size; }            
     };
 }

@@ -16,6 +16,7 @@ namespace JkBmsCpp {
     };
 
     enum class JkBmsResponseType: uint8_t {
+        SETTINGS = 0x01,
         CELL_INFO = 0x02,
         DEVICE_INFO = 0x03,
     };
@@ -36,8 +37,13 @@ namespace JkBmsCpp {
             JkBmsString setupPasscode;
     };
 
-    bool checkFrameStart(JkBmsDataBuffer);
-    bool checkFrameChecksum(JkBmsDataBuffer);
-    Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(JkBmsDataBuffer);
+    Expected<JkBmsResponseType, JkBmsControllerError> getResponseType(
+        const JkBmsDataBuffer& buffer
+    );
+    bool checkFrameStart(const JkBmsDataBuffer& buffer);
+    bool checkFrameChecksum(const JkBmsDataBuffer& buffer);
+    Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
+        const JkBmsDataBuffer& buffer
+    );
 
 };

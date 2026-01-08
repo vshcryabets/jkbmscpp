@@ -13,8 +13,7 @@ class JkBmsSourceSimpleBleImpl : public JkBmsCpp::JkBmsSource {
         virtual JkBmsCpp::JkBmsSourceError connect() override;
         virtual JkBmsCpp::JkBmsSourceError disconnect() override;
         virtual JkBmsCpp::JkBmsSourceError sendCommand(
-            const uint8_t* data, 
-            const uint16_t size,
+            const JkBmsCpp::JkBmsDataBuffer& command,
             const JkBmsCpp::JkBmsString& service_uuid,
             const JkBmsCpp::JkBmsString& char_uuid) override;
         virtual size_t getMtu() override;
@@ -22,7 +21,7 @@ class JkBmsSourceSimpleBleImpl : public JkBmsCpp::JkBmsSource {
             const JkBmsCpp::JkBmsString& service_uuid,
             const JkBmsCpp::JkBmsString& char_uuid,
             void* context,
-            void(*callback)(void* context, const uint8_t* data, const uint16_t size)
+            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer& data)
         ) override;
         virtual JkBmsCpp::JkBmsSourceError unsubscribe(
             const JkBmsCpp::JkBmsString& service_uuid,

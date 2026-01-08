@@ -3,7 +3,7 @@
 namespace JkBmsCpp {
 
     Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
-        JkBmsDataBuffer buffer) {
+        const JkBmsDataBuffer& buffer) {
         if (!checkFrameStart(buffer)) {
             return JkBmsControllerError::INVALID_MAGIC_BYTES;
         }
@@ -41,23 +41,44 @@ namespace JkBmsCpp {
         return response;
     }
 
-    bool checkFrameStart(JkBmsDataBuffer buffer) {
+    bool checkFrameStart(const JkBmsDataBuffer &buffer) {
         if (buffer.size() < 4) {
             return false;
         }
-        uint8_t* data = buffer.data();
+        const uint8_t* data = buffer.data();
         return data[0] == 0x55 && data[1] == 0xaa && data[2] == 0xeb && data[3] == 0x90;
     }
 
-    bool checkFrameChecksum(JkBmsDataBuffer buffer) {
+    bool checkFrameChecksum(const JkBmsDataBuffer &buffer) {
         if (buffer.size() < 5) {
             return false;
         }
-        uint8_t* data = buffer.data();
+        const uint8_t* data = buffer.data();
         uint8_t checksum = 0;
         for (size_t i = 0; i < buffer.size() - 1; i++) {
             checksum += data[i];
         }
         return checksum == data[buffer.size() - 1];
+    }
+
+    Expected<JkBmsResponseType, JkBmsControllerError> getResponseType(
+        const JkBmsDataBuffer& buffer
+    ) {
+        if (!checkFrameStart(buffer)) {
+            return JkBmsControllerError::INVALID_MAGIC_BYTES;
+        }
+        if (buffer.size() < 5) {
+            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        }
+        const uint8_t* data = buffer.data();
+        JkBmsResponseType responseType = static_cast<JkBmsResponseType>(data[4]);
+        switch (responseType) {
+            case JkBmsResponseType::SETTINGS:
+            case JkBmsResponseType::CELL_INFO:
+            case JkBmsResponseType::DEVICE_INFO:
+                return responseType;
+            default:
+                return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        }
     }
 };

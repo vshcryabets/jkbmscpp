@@ -74,14 +74,24 @@ int main() {
         
         controller.start(&source);
         std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
-        auto result = controller.readDeviceState();
-        if (result.hasValue()) {
-            std::cout << "Read device state successfully." << std::endl;
+        auto deviceInfo = controller.readDeviceState().get();
+
+
+        if (!deviceInfo.hasValue()) {
+            std::cerr << "Error parsing device info: "
+                << static_cast<uint8_t>(deviceInfo.error()) << std::endl;
         } else {
-            std::cout << "Failed to read device state. Error code: " 
-                      << static_cast<int>(result.error()) << std::endl;
+            std::cout << "Device Info:" << std::endl;
+            std::cout << "  Vendor ID: " << deviceInfo.value().vendorId << std::endl;
+            std::cout << "  HW Version: " << deviceInfo.value().hwVersion << std::endl;
+            std::cout << "  SW Version: " << deviceInfo.value().swVersion << std::endl;
+            std::cout << "  Uptime (s): " << deviceInfo.value().uptimeSeconds << std::endl;
+            std::cout << "  Power On Counter: " << deviceInfo.value().powerOnCounter << std::endl;
+            std::cout << "  Device Name: " << deviceInfo.value().deviceName << std::endl;
+            std::cout << "  Serial Number: " << deviceInfo.value().serialNumber << std::endl;
         }
-        std::this_thread::sleep_for(std::chrono::seconds(15));
+        
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         controller.end();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

@@ -14,6 +14,7 @@ const JkBmsString JkBmsController::CHARACTERISTIC_UUID = "0000ffe1-0000-1000-800
 
 JkBmsController::JkBmsController()
 {
+    responseBuffer.reserve(MAX_PACKET_SIZE);
 }
 
 JkBmsController::~JkBmsController()
@@ -43,21 +44,26 @@ void JkBmsController::end()
     }
 }
 
-uint8_t JkBmsController::calculateChecksum(const uint8_t* data, const uint16_t size) {
+uint8_t JkBmsController::calculateChecksum(const JkBmsDataBuffer& data) {
     uint8_t crc = 0;
-    for (size_t i = 0; i < size; i++) {
-        crc += data[i];
+    for (size_t i = 0; i < data.size(); i++) {
+        crc += data.data()[i];
     }
     return crc;
 }
 
-Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> JkBmsController::readDeviceState()
+DeviceInfoFuture JkBmsController::readDeviceState()
 {
+    pendingDeviceInfoRequest = std::make_unique<DeviceInfoPromise>();
     if (source == nullptr) {
         std::cerr << "Source is not started" << std::endl;
-        return JkBmsControllerError::ERROR_NO_SOURCE;
+        pendingDeviceInfoRequest->set_value(
+            Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>(
+                JkBmsControllerError::ERROR_NO_SOURCE));
+        return pendingDeviceInfoRequest->get_future();
     }
     uint8_t frame[20];
+    JkBmsDataBuffer command(frame, sizeof(frame));
     uint8_t length = 0;
     uint32_t value = 0;
     frame[0] = 0xAA;     // start sequence
@@ -79,22 +85,61 @@ Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> JkBmsController::readDev
     frame[16] = 0x00;
     frame[17] = 0x00;
     frame[18] = 0x00;
-    frame[19] = calculateChecksum(frame, 19);
-    source->sendCommand(frame, sizeof(frame), SERVICE_UUID, CHARACTERISTIC_UUID);
-    return JkBmsControllerError::SUCCESS;
+    frame[19] = calculateChecksum(command);
+    responseBuffer.clear();
+    source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
+    return pendingDeviceInfoRequest->get_future();
 }
 
 void JkBmsController::notificationCallback(
             void* ctx,
-            const uint8_t* data,
-            const uint16_t size) {
+            const JkBmsDataBuffer &data) {
     JkBmsController* controller = static_cast<JkBmsController*>(ctx);
-    controller->handleResponse(data, size);
+    controller->handleResponse(data);
 }
 
-void JkBmsController::handleResponse(const uint8_t* data, const uint16_t size) {
-    std::cout << "Received " << size << " bytes:" << std::endl;
-    dumpDataToLog(data, size);
-    
+void JkBmsController::handleResponse(const JkBmsDataBuffer &data) {
+    std::cout << "Received " << data.size() << " bytes:" << std::endl;
+    dumpDataToLog(data.data(), data.size());
+    if (checkFrameStart(data)) {
+        // we received new packet, clear previous data
+        std::cout << "New packet detected, clearing buffer" << std::endl;
+        responseBuffer.clear();
+    }
+    responseBuffer.insert(responseBuffer.end(), data.data(), data.data() + data.size());
+    if (responseBuffer.size() >= DEFAULT_PACKET_SIZE) {
+        // we have full packet, process it
+        JkBmsDataBuffer buffer(responseBuffer.data(), responseBuffer.size());
+        if (!checkFrameChecksum(buffer)) {
+            std::cerr << "Checksum mismatch" << std::endl;
+            return;
+        }
+        auto responseType = getResponseType(buffer);
+        if (!responseType.hasValue()) {
+            std::cerr << "Error getting response type: "
+                << static_cast<uint8_t>(responseType.error()) << std::endl;
+            return;
+        } else {
+            std::cout << "Response type: " << (int)responseType.value() << std::endl;
+            switch (responseType.value())
+            {
+            case JkBmsResponseType::DEVICE_INFO:
+                {
+                    if (pendingDeviceInfoRequest) {
+                        auto deviceInfo = parseDeviceInfo(
+                            JkBmsDataBuffer(responseBuffer.data(), responseBuffer.size()));
+                        pendingDeviceInfoRequest->set_value(deviceInfo);
+                        pendingDeviceInfoRequest.reset();
+                    }
+                }
+                break;
+            
+            default:
+                break;
+            }
+            responseBuffer.clear();
+        }
+    }    
 }
+
 } // namespace JkBmsCpp
