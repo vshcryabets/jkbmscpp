@@ -1,4 +1,5 @@
 #include "JkBmsFrames.h"
+#include <string.h>
 
 namespace JkBmsCpp {
 
