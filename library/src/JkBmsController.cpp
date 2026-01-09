@@ -171,7 +171,16 @@ void JkBmsController::handleResponse(const JkBmsDataBuffer &data) {
                     }
                 }
                 break;
-            
+            case JkBmsResponseType::CELL_INFO:
+                {
+                    if (pendingCellInfoRequest) {
+                        auto cellInfo = parseCellsInfo(
+                            JkBmsDataBuffer(responseBuffer.data(), responseBuffer.size()));
+                        pendingCellInfoRequest->set_value(cellInfo);
+                        pendingCellInfoRequest.reset();
+                    }
+                }
+                break;
             default:
                 break;
             }

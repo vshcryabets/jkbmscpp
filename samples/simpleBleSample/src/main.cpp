@@ -94,6 +94,23 @@ int main() {
             }
             controller.readCellsState();
             auto cellsInfo = controller.readCellsState().get();
+            if (!cellsInfo.hasValue()) {
+                std::cerr << "Error parsing cells info: "
+                    << static_cast<uint8_t>(cellsInfo.error()) << std::endl;
+                break;
+            } else {
+                std::cout << "Cells Info:" << std::endl;
+                for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
+                    std::cout << "  Cell " << (i + 1) << ": " 
+                        << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
+                }
+                std::cout << "  Battery Voltage: " 
+                    << cellsInfo.value().batteryVoltage_mV << " mV" << std::endl;
+                std::cout << "  Battery Power: " 
+                    << cellsInfo.value().batteryPower_mW << " mW" << std::endl;
+                std::cout << "  Charge Current: " 
+                    << cellsInfo.value().chargeCurrent_mA << " mA" << std::endl;
+            }
 
         } while(false);        
 
