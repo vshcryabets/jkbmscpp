@@ -73,9 +73,48 @@ int main() {
         JkBmsCpp::JkBmsController controller;
         
         controller.start(&source);
-        std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
-        controller.readDeviceState();
-        std::this_thread::sleep_for(std::chrono::seconds(15));
+
+        do {
+            std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
+            auto deviceInfo = controller.readDeviceState().get();
+
+            if (!deviceInfo.hasValue()) {
+                std::cerr << "Error parsing device info: "
+                    << static_cast<uint8_t>(deviceInfo.error()) << std::endl;
+                break;
+            } else {
+                std::cout << "Device Info:" << std::endl;
+                std::cout << "  Vendor ID: " << deviceInfo.value().vendorId << std::endl;
+                std::cout << "  HW Version: " << deviceInfo.value().hwVersion << std::endl;
+                std::cout << "  SW Version: " << deviceInfo.value().swVersion << std::endl;
+                std::cout << "  Uptime (s): " << deviceInfo.value().uptimeSeconds << std::endl;
+                std::cout << "  Power On Counter: " << deviceInfo.value().powerOnCounter << std::endl;
+                std::cout << "  Device Name: " << deviceInfo.value().deviceName << std::endl;
+                std::cout << "  Serial Number: " << deviceInfo.value().serialNumber << std::endl;
+            }
+            controller.readCellsState();
+            auto cellsInfo = controller.readCellsState().get();
+            if (!cellsInfo.hasValue()) {
+                std::cerr << "Error parsing cells info: "
+                    << static_cast<uint8_t>(cellsInfo.error()) << std::endl;
+                break;
+            } else {
+                std::cout << "Cells Info:" << std::endl;
+                for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
+                    std::cout << "  Cell " << (i + 1) << ": " 
+                        << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
+                }
+                std::cout << "  Battery Voltage: " 
+                    << cellsInfo.value().batteryVoltage_mV << " mV" << std::endl;
+                std::cout << "  Battery Power: " 
+                    << cellsInfo.value().batteryPower_mW << " mW" << std::endl;
+                std::cout << "  Charge Current: " 
+                    << cellsInfo.value().chargeCurrent_mA << " mA" << std::endl;
+            }
+
+        } while(false);        
+
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         controller.end();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
