@@ -3,6 +3,7 @@
 
 #include "JkBmsFrames.h"
 #include "CppWrappers.h"
+#include "JkBmsTools.h"
 
 constexpr uint8_t SAMPLE_CELL_INFO_FRAME[] = {
     0x55, 0xaa, 0xeb, 0x90, 
@@ -165,8 +166,6 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     JkBmsCpp::JkBmsDataBuffer buffer((uint8_t*)SAMPLE_CELL_INFO_FRAME, 
         sizeof(SAMPLE_CELL_INFO_FRAME));
     auto deviceInfo = JkBmsCpp::parseCellsInfo(buffer);
-    std::cout << "buffer size=" << buffer.size() << std::endl;
-    std::cout << "error=" << (int)deviceInfo.error() << std::endl;
     REQUIRE(deviceInfo.hasValue() == true);
     auto info = deviceInfo.value();
     REQUIRE(info.cellVoltages_mV[0] == 3327);
@@ -204,6 +203,39 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     REQUIRE(info.batteryPercentage == 99);
     REQUIRE(info.remainingCapacity_mAh == 74108);
     REQUIRE(info.fullCapacity_mAh == 74489);
+}
 
+TEST_CASE("calculateCRC", "[JkBmsFrames]") {
+    uint8_t byteBuffer[20];
+    JkBmsCpp::JkBmsDataBuffer buffer(byteBuffer, sizeof(byteBuffer));
+    prepareCommandBuffer(0x96, 0, 0, buffer);
+    uint8_t crc = JkBmsCpp::calculateCRC(JkBmsCpp::JkBmsDataBuffer(buffer.data(), buffer.size() - 1));
+    REQUIRE(crc == 0x10);
+}
 
+TEST_CASE("prepareCommandBuffer", "[JkBmsFrames]") {
+    uint8_t byteBuffer[20];
+    JkBmsCpp::JkBmsDataBuffer buffer(byteBuffer, sizeof(byteBuffer));
+    prepareCommandBuffer(0x38, 0x12345678, 4, buffer);
+    REQUIRE(byteBuffer[0] == 0xaa);
+    REQUIRE(byteBuffer[1] == 0x55);
+    REQUIRE(byteBuffer[2] == 0x90);
+    REQUIRE(byteBuffer[3] == 0xeb);
+    REQUIRE(byteBuffer[4] == 0x38);
+    REQUIRE(byteBuffer[5] == 0x04);
+    REQUIRE(byteBuffer[6] == 0x78);
+    REQUIRE(byteBuffer[7] == 0x56);
+    REQUIRE(byteBuffer[8] == 0x34);
+    REQUIRE(byteBuffer[9] == 0x12);
+    REQUIRE(byteBuffer[10] == 0x00);
+    REQUIRE(byteBuffer[11] == 0x00);
+    REQUIRE(byteBuffer[12] == 0x00);
+    REQUIRE(byteBuffer[13] == 0x00);
+    REQUIRE(byteBuffer[14] == 0x00);
+    REQUIRE(byteBuffer[15] == 0x00);
+    REQUIRE(byteBuffer[16] == 0x00);
+    REQUIRE(byteBuffer[17] == 0x00);
+    REQUIRE(byteBuffer[18] == 0x00);
+    std::cout << "Calculated CRC: " << std::hex << (int)byteBuffer[19] << std::dec << std::endl;    
+    REQUIRE(byteBuffer[19] == 0xca); // checksum
 }

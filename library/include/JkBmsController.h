@@ -55,7 +55,6 @@ namespace JkBmsCpp {
             void* ctx,
            const JkBmsDataBuffer &data);
         void handleResponse(const JkBmsDataBuffer &data);
-        uint8_t calculateChecksum(const JkBmsDataBuffer &data);
     public:
         JkBmsController();
         virtual void start(JkBmsSource* source);

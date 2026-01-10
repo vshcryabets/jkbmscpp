@@ -50,12 +50,12 @@ namespace JkBmsCpp {
     class JkBmsDataBuffer {
         private:
             uint8_t* _data;
-            size_t _size;
+            uint16_t _size;
         public:
-            JkBmsDataBuffer(uint8_t* data, size_t size)
+            JkBmsDataBuffer(uint8_t* data, uint16_t size)
                 : _data(data), _size(size) {}
             ~JkBmsDataBuffer() = default;
-            const uint8_t* data() const { return _data; }
-            size_t size() const { return _size; }            
+            uint8_t* data() const { return _data; }
+            uint16_t size() const { return _size; }            
     };
 }

@@ -13,6 +13,7 @@ namespace JkBmsCpp {
         CRC_MISMATCH = 2,
         INVALID_MAGIC_BYTES = 3,
         INVALID_RESPONSE_TYPE = 4,
+        BUFER_TOO_SMALL = 5,
     };
 
     enum class JkBmsResponseType: uint8_t {
@@ -76,6 +77,10 @@ namespace JkBmsCpp {
     Expected<JkBmsCellInfoResponse, JkBmsControllerError> parseCellsInfo(
         const JkBmsDataBuffer& buffer
     );
-    
+    uint8_t calculateCRC(const JkBmsDataBuffer& buffer);
+    JkBmsControllerError prepareCommandBuffer(uint8_t reg, 
+        uint32_t value,
+        uint8_t length,
+        const JkBmsDataBuffer& outBuffer);
 
 };

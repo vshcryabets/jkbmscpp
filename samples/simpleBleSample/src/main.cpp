@@ -92,29 +92,41 @@ int main() {
                 std::cout << "  Device Name: " << deviceInfo.value().deviceName << std::endl;
                 std::cout << "  Serial Number: " << deviceInfo.value().serialNumber << std::endl;
             }
-            controller.readCellsState();
-            auto cellsInfo = controller.readCellsState().get();
-            if (!cellsInfo.hasValue()) {
-                std::cerr << "Error parsing cells info: "
-                    << static_cast<uint8_t>(cellsInfo.error()) << std::endl;
-                break;
-            } else {
-                std::cout << "Cells Info:" << std::endl;
-                for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
-                    std::cout << "  Cell " << (i + 1) << ": " 
-                        << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
-                }
-                std::cout << "  Battery Voltage: " 
-                    << cellsInfo.value().batteryVoltage_mV << " mV" << std::endl;
-                std::cout << "  Battery Power: " 
-                    << cellsInfo.value().batteryPower_mW << " mW" << std::endl;
-                std::cout << "  Charge Current: " 
-                    << cellsInfo.value().chargeCurrent_mA << " mA" << std::endl;
-            }
 
+            for (int i = 0; i < 10; i++) {
+                auto timeout = std::chrono::seconds(5);  // Increased timeout
+                std::this_thread::sleep_for(std::chrono::seconds(3));  // Increased delay
+                
+                std::cout << "Read cells " << (i + 1) << std::endl;
+                auto fut = controller.readCellsState();
+                std::future_status status = fut.wait_for(timeout);
+
+                if (status ==  std::future_status::ready) {
+                    // Result is ready, safe to call get()
+                    auto cellsInfo = fut.get();
+
+                    std::cout << "Cells Info:" << std::endl;
+                    for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
+                        std::cout << "  Cell " << (i + 1) << ": " 
+                            << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
+                    }
+                    std::cout << "  Battery Voltage: " 
+                        << cellsInfo.value().batteryVoltage_mV << " mV" << std::endl;
+                    std::cout << "  Battery Power: " 
+                        << cellsInfo.value().batteryPower_mW << " mW" << std::endl;
+                    std::cout << "  Charge Current: " 
+                        << cellsInfo.value().chargeCurrent_mA << " mA" << std::endl;
+                    break;
+                } else if (status == std::future_status::timeout) {
+                    std::cout << "Timeout occurred! The task is still running.\n";
+                } else if (status == std::future_status::deferred) {
+                    std::cout << "Task is deferred (not started yet). call get() to run it synchronously.\n";
+                } else {
+                    std::cout << "Unknown future status.\n";
+                }
+            }            
         } while(false);        
 
-        std::this_thread::sleep_for(std::chrono::seconds(2));
         controller.end();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

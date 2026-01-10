@@ -148,4 +148,36 @@ namespace JkBmsCpp {
                 return JkBmsControllerError::INVALID_RESPONSE_TYPE;
         }
     }
+
+    uint8_t calculateCRC(const JkBmsDataBuffer& buffer) {
+        uint8_t crc = 0;
+        for (uint16_t i = 0; i < buffer.size(); i++) {
+            crc += buffer.data()[i];
+        }
+        return crc;
+    }
+
+    JkBmsControllerError prepareCommandBuffer(uint8_t reg, 
+        uint32_t value,
+        uint8_t length,
+        const JkBmsDataBuffer& outBuffer) {
+        if (outBuffer.size() < 20) {
+            return JkBmsControllerError::BUFER_TOO_SMALL;
+        }
+        constexpr size_t CRC_FRAME_SIZE = 19;
+        uint8_t* frame = outBuffer.data();
+        memset(frame, 0, outBuffer.size());
+        frame[0] = 0xAA;     // start sequence
+        frame[1] = 0x55;     // start sequence
+        frame[2] = 0x90;     // start sequence
+        frame[3] = 0xEB;     // start sequence
+        frame[4] = reg;     // holding register
+        frame[5] = length;   // size of the value in byte
+        frame[6] = value >> 0;
+        frame[7] = value >> 8;
+        frame[8] = value >> 16;
+        frame[9] = value >> 24;
+        frame[19] = calculateCRC(JkBmsDataBuffer(frame, CRC_FRAME_SIZE));
+        return JkBmsControllerError::SUCCESS;
+    }
 };
