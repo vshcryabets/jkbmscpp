@@ -56,7 +56,6 @@ CellInfoFuture JkBmsController::readCellsState() {
     uint8_t frame[20];
     JkBmsDataBuffer command(frame, sizeof(frame));
     prepareCommandBuffer(0x96, 0, 0, command);
-    responseBuffer.clear();
     source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
     return pendingCellInfoRequest->get_future();
 }
@@ -74,7 +73,6 @@ DeviceInfoFuture JkBmsController::readDeviceState()
     uint8_t frame[20];
     JkBmsDataBuffer command(frame, sizeof(frame));
     prepareCommandBuffer(0x97, 0, 0, command);
-    responseBuffer.clear();
     source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
     return pendingDeviceInfoRequest->get_future();
 }

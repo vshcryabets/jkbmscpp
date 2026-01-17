@@ -61,14 +61,17 @@ namespace JkBmsCpp {
         pos += 2;
         response.balanceAction = data[pos++];
         response.batteryPercentage = data[pos++];
-        response.remainingCapacity_mAh = (uint8_t)data[174] |
-            ((uint8_t)data[175] << 8) | 
-            ((uint8_t)data[176] << 16) | 
-            ((uint8_t)data[177] << 24);
-        response.fullCapacity_mAh = (uint8_t)data[178] |
-            ((uint8_t)data[179] << 8) | 
-            ((uint8_t)data[180] << 16) | 
-            ((uint8_t)data[181] << 24);
+        // not yet implemented fields
+        response.remainingCapacity_mAh = 0;
+        response.fullCapacity_mAh = 0;
+        response.cycleCount = 0;
+        response.totalCycleCapacity_mAh = 0;
+        response.sohPercentage = 0;
+        response.totalRunTime = 0;
+        response.chargingState = 0;
+        response.dischargingState = 0;
+        response.emergencyTimeCountdown_s = 0;
+
         return response;
     }
 
@@ -89,18 +92,11 @@ namespace JkBmsCpp {
         }
         JkBmsDeviceInfoResponse response;
         // Parsing logic to extract fields from buffer
-        // This is a placeholder implementation
         response.vendorId = JkBmsString(data + 6, strnlen(data + 6, 16));
         response.hwVersion = JkBmsString(data + 22, strnlen(data + 22, 8));
         response.swVersion = JkBmsString(data + 30, strnlen(data + 30, 8));
-        response.uptimeSeconds = (uint8_t)data[38] |
-            ((uint8_t)data[39] << 8) | 
-            ((uint8_t)data[40] << 16) | 
-            ((uint8_t)data[41] << 24);
-        response.powerOnCounter = data[42] | 
-            (data[43] << 8) | 
-            (data[44] << 16) | 
-            (data[45] << 24);
+        response.uptimeSeconds = getUInt32LE(buffer.data(), 38);
+        response.powerOnCounter = getUInt32LE(buffer.data(), 42);
         response.deviceName = JkBmsString(data + 46, strnlen(data + 46, 16));
         response.devicePasscode = JkBmsString(data + 62, strnlen(data + 62, 16));
         response.manufacturedate = JkBmsString(data + 78, strnlen(data + 78, 8));
@@ -165,7 +161,7 @@ namespace JkBmsCpp {
         uint8_t length,
         const JkBmsDataBuffer& outBuffer) {
         if (outBuffer.size() < 20) {
-            return JkBmsControllerError::BUFER_TOO_SMALL;
+            return JkBmsControllerError::BUFFER_TOO_SMALL;
         }
         constexpr size_t CRC_FRAME_SIZE = 19;
         uint8_t* frame = outBuffer.data();

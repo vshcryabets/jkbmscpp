@@ -27,7 +27,7 @@ namespace JkBmsCpp {
                     new(&_error) E(other._error);
                 }
             }
-            Expected(const Expected&& other) : _has_value(other._has_value) {
+            Expected(Expected&& other) : _has_value(other._has_value) {
                 if (other._has_value) {
                     new(&_value) T(std::move(other._value));
                 } else {
@@ -41,8 +41,14 @@ namespace JkBmsCpp {
             const E& error() const { return _error; }
             ~Expected() {
                 if (_has_value) {
+                    if (std::is_trivially_destructible<T>::value) {
+                        return;
+                    }
                     _value.~T();
                 } else {
+                    if (std::is_trivially_destructible<E>::value) {
+                        return;
+                    }
                     _error.~E();
                 }
             }

@@ -13,7 +13,7 @@ namespace JkBmsCpp {
         CRC_MISMATCH = 2,
         INVALID_MAGIC_BYTES = 3,
         INVALID_RESPONSE_TYPE = 4,
-        BUFER_TOO_SMALL = 5,
+        BUFFER_TOO_SMALL = 5,
     };
 
     enum class JkBmsResponseType: uint8_t {
@@ -74,7 +74,7 @@ namespace JkBmsCpp {
         return (uint16_t)data[pos] | ((uint16_t)data[pos + 1] << 8);
     }
     inline int16_t getInt16LE(const uint8_t* data, size_t pos) {
-        return static_cast<int32_t>(data[pos] | ((uint16_t)data[pos + 1] << 8));
+        return static_cast<int16_t>(data[pos] | ((uint16_t)data[pos + 1] << 8));
     }
     inline uint32_t getUInt32LE(const uint8_t* data, size_t pos) {
         return (uint32_t)data[pos] | 

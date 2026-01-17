@@ -106,12 +106,12 @@ int main() {
                     auto cellsInfo = fut.get();
 
                     std::cout << "Cells Info:" << std::endl;
-                    for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
-                        if (cellsInfo.value().cellVoltages_mV[i] == 0) {
+                    for (size_t cell = 0; cell < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; cell++) {
+                        if (cellsInfo.value().cellVoltages_mV[cell] == 0) {
                             break;
                         }
-                        std::cout << "  Cell " << (i + 1) << ": " 
-                            << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
+                        std::cout << "  Cell " << (cell + 1) << ": " 
+                            << cellsInfo.value().cellVoltages_mV[cell] << " mV" << std::endl;
                     }
                     std::cout << "  Battery Voltage: " 
                         << cellsInfo.value().batteryVoltage_mV << " mV" << std::endl;
