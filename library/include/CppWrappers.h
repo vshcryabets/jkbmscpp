@@ -27,6 +27,15 @@ namespace JkBmsCpp {
                     new(&_error) E(other._error);
                 }
             }
+            Expected(const Expected&& other) : _has_value(other._has_value) {
+                if (other._has_value) {
+                    new(&_value) T(std::move(other._value));
+                } else {
+                    new(&_error) E(std::move(other._error));
+                }
+            }
+            Expected& operator=(const Expected& other) = delete;
+            Expected& operator=(Expected&& other) = delete;
             bool hasValue() const { return _has_value; }
             const T& value() const { return _value; }
             const E& error() const { return _error; }

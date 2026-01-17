@@ -14,50 +14,53 @@ namespace JkBmsCpp {
         if (buffer.size() != 300) {
             return JkBmsControllerError::INVALID_RESPONSE_TYPE;
         }
-        char* data = (char*)buffer.data();
+        const uint8_t* data = (const uint8_t*)buffer.data();
         if (buffer.data()[4] != static_cast<uint8_t>(JkBmsResponseType::CELL_INFO)) {
             return JkBmsControllerError::INVALID_RESPONSE_TYPE;
         }
         JkBmsCellInfoResponse response;
+        uint8_t cellCount = JkBmsCellInfoResponse::CELL_COUNT;
+        uint16_t pos = 6;
+
         // read cell voltages
-        for (size_t i = 0; i < JkBmsCellInfoResponse::CELL_COUNT; i++) {
-            response.cellVoltages_mV[i] = (uint8_t)data[6 + i * 2] | 
-                ((uint8_t)data[7 + i * 2] << 8);
+        for (size_t i = 0; i < cellCount; i++) {
+            response.cellVoltages_mV[i] = getUInt16LE(data, pos);
+            pos += 2;
         }
+        response.enabledCellMask = getUInt32LE(data, pos);
+        pos += 4;
+        response.averageCellVoltage_mV = getUInt16LE(data, pos);
+        pos += 2;
+        response.deltaCellVoltage_mV = getUInt16LE(data, pos);
+        pos += 2;
+        response.maxVoltageCellIndex = data[pos++];
+        response.minVoltageCellIndex = data[pos++];
 
-        response.enabledCellMask = (uint8_t)data[70] | 
-            ((uint8_t)data[71] << 8) | 
-            ((uint8_t)data[72] << 16) | 
-            ((uint8_t)data[73] << 24);
-
-        for (size_t i = 0; i < JkBmsCellInfoResponse::CELL_COUNT; i++) {
-            response.cellResistances_mOhm[i] = (uint8_t)data[80 + i * 2] | 
-                ((uint8_t)data[81 + i * 2] << 8);
+        for (size_t i = 0; i < cellCount; i++) {
+            response.cellResistances_mOhm[i] = getUInt16LE(data, pos);
+            pos += 2;
         }
-        response.powerTubeTemperature = (uint8_t)data[144] | 
-            ((uint8_t)data[145] << 8);
-        response.wireResistanceWarningMask = (uint8_t)data[146] | 
-            ((uint8_t)data[147] << 8) | 
-            ((uint8_t)data[148] << 16) | 
-            ((uint8_t)data[149] << 24);
-        response.batteryVoltage_mV = (uint8_t)data[150] |
-            ((uint8_t)data[151] << 8) | 
-            ((uint8_t)data[152] << 16) | 
-            ((uint8_t)data[153] << 24);
-        response.chargeCurrent_mA = (int8_t)data[158] | 
-            ((int8_t)data[159] << 8) | 
-            ((int8_t)data[160] << 16) | 
-            ((int8_t)data[161] << 24);
-        response.temperatureSensor1 = (uint8_t)data[162] | 
-            ((uint8_t)data[163] << 8);
-        response.temperatureSensor2 = (uint8_t)data[164] | 
-            ((uint8_t)data[165] << 8);
-        response.errorsMask = (uint8_t)data[166] | 
-            ((uint8_t)data[167] << 8);
-        response.balanceCurrent_mA = (uint8_t)data[168] | 
-            ((uint8_t)data[169] << 8);
-        response.balanceAction = data[170];
-        response.batteryPercentage = data[173];
+        response.powerTubeTemperature = getUInt16LE(data, pos);
+        pos += 2;
+        response.wireResistanceWarningMask = getUInt32LE(data, pos);
+        pos += 4;
+        response.batteryVoltage_mV = getUInt32LE(data, pos);
+        pos += 4;
+        response.batteryPower_mW = getInt32LE(data, pos);
+        pos += 4;
+        response.chargeCurrent_mA = getInt32LE(data, pos);
+        pos += 4;
+        response.temperatureSensor1 = getInt16LE(data, pos);
+        pos += 2;
+        response.temperatureSensor2 = getInt16LE(data, pos);
+        pos += 2;        
+        response.errorsMask = getUInt16LE(data, pos);
+        pos += 2;
+        pos += 2; // skip unknown bytes
+        response.balanceCurrent_mA = getInt16LE(data, pos);
+        pos += 2;
+        response.balanceAction = data[pos++];
+        response.batteryPercentage = data[pos++];
         response.remainingCapacity_mAh = (uint8_t)data[174] |
             ((uint8_t)data[175] << 8) | 
             ((uint8_t)data[176] << 16) | 
@@ -80,7 +83,7 @@ namespace JkBmsCpp {
         if (buffer.size() != 300) {
             return JkBmsControllerError::INVALID_RESPONSE_TYPE;
         }
-        char* data = (char*)buffer.data();
+        const char* data = (const char*)buffer.data();
         if (data[4] != static_cast<char>(JkBmsResponseType::DEVICE_INFO)) {
             return JkBmsControllerError::INVALID_RESPONSE_TYPE;
         }

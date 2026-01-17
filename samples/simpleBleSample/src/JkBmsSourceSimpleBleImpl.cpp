@@ -48,7 +48,7 @@ JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::subscribe(
             callback(
                 context, 
                 JkBmsCpp::JkBmsDataBuffer(
-                    (uint8_t*)bytes.data(), 
+                    bytes.data(),
                     static_cast<uint16_t>(bytes.size())
                 ));
     });

@@ -5,6 +5,9 @@
 #include "CppWrappers.h"
 #include "JkBmsTools.h"
 
+using namespace JkBmsCpp;
+
+
 constexpr uint8_t SAMPLE_CELL_INFO_FRAME[] = {
     0x55, 0xaa, 0xeb, 0x90, 
     0x02, 
@@ -55,12 +58,12 @@ constexpr uint8_t SAMPLE_CELL_INFO_FRAME[] = {
 
     // Errors bitmask, 166
     0x00, 0x00, 
-    // Balance current, 168
+    // ???, 168
     0x00, 0x00, 
-    // Balancing action, 170
+    // Balance current, 170
+    0x00, 0x00,
+    // Balancing action, 172
     0x00, 
-    
-    0x00,  0x00,  // ??, 171
     
     // State of charge, 173
     0x63,
@@ -165,9 +168,9 @@ TEST_CASE("parseDeviceInfo", "[JkBmsFrames]") {
 TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     JkBmsCpp::JkBmsDataBuffer buffer((uint8_t*)SAMPLE_CELL_INFO_FRAME, 
         sizeof(SAMPLE_CELL_INFO_FRAME));
-    auto deviceInfo = JkBmsCpp::parseCellsInfo(buffer);
-    REQUIRE(deviceInfo.hasValue() == true);
-    auto info = deviceInfo.value();
+    auto cellsInfo = JkBmsCpp::parseCellsInfo(buffer);
+    REQUIRE(cellsInfo.hasValue() == true);
+    auto& info = cellsInfo.value();
     REQUIRE(info.cellVoltages_mV[0] == 3327);
     REQUIRE(info.cellVoltages_mV[1] == 0xcff);
     REQUIRE(info.cellVoltages_mV[2] == 0xcff);
@@ -179,6 +182,10 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     REQUIRE(info.cellVoltages_mV[8] == 0x00);
 
     REQUIRE(info.enabledCellMask == 0xFF);
+    REQUIRE(info.averageCellVoltage_mV== 0x0cfe);
+    REQUIRE(info.deltaCellVoltage_mV== 0x0003);
+    REQUIRE(info.maxVoltageCellIndex== 0x00);
+    REQUIRE(info.minVoltageCellIndex== 0x01);
 
     REQUIRE(info.cellResistances_mOhm[0] == 152);
     REQUIRE(info.cellResistances_mOhm[1] == 155);
@@ -193,13 +200,16 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     REQUIRE(info.powerTubeTemperature == 227);
     REQUIRE(info.batteryVoltage_mV == 26608);
     REQUIRE(info.chargeCurrent_mA == -186);
-
     REQUIRE(info.temperatureSensor1 == 221);
     REQUIRE(info.temperatureSensor2 == 230);
-
     REQUIRE(info.errorsMask == 0);
     REQUIRE(info.balanceCurrent_mA == 0);
     REQUIRE(info.balanceAction == 0);
+
+
+    REQUIRE(info.batteryPower_mW == -4940);
+
+
     REQUIRE(info.batteryPercentage == 99);
     REQUIRE(info.remainingCapacity_mAh == 74108);
     REQUIRE(info.fullCapacity_mAh == 74489);
@@ -238,4 +248,79 @@ TEST_CASE("prepareCommandBuffer", "[JkBmsFrames]") {
     REQUIRE(byteBuffer[18] == 0x00);
     std::cout << "Calculated CRC: " << std::hex << (int)byteBuffer[19] << std::dec << std::endl;    
     REQUIRE(byteBuffer[19] == 0xca); // checksum
+}
+
+TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
+    
+    SECTION("Valid CELL_INFO response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x02}; // CELL_INFO = 0x02
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE(result.hasValue());
+        REQUIRE(result.value() == JkBmsResponseType::CELL_INFO);
+    }
+    
+    SECTION("Valid DEVICE_INFO response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x03}; // DEVICE_INFO = 0x03
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE(result.hasValue());
+        REQUIRE(result.value() == JkBmsResponseType::DEVICE_INFO);
+    }
+    
+    SECTION("Valid SETTINGS response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x01}; // SETTINGS = 0x01
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE(result.hasValue());
+        REQUIRE(result.value() == JkBmsResponseType::SETTINGS);
+    }
+    
+    SECTION("Invalid magic bytes") {
+        std::vector<uint8_t> buffer = {0x54, 0xaa, 0xeb, 0x90, 0x02}; // Wrong first byte
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE_FALSE(result.hasValue());
+        REQUIRE(result.error() == JkBmsControllerError::INVALID_MAGIC_BYTES);
+    }
+    
+    SECTION("Buffer too small") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb}; // Only 3 bytes
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE_FALSE(result.hasValue());
+        REQUIRE(result.error() == JkBmsControllerError::INVALID_MAGIC_BYTES);
+    }
+    
+    SECTION("Buffer exactly 4 bytes - missing response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90}; // Missing response type byte
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE_FALSE(result.hasValue());
+        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+    }
+    
+    SECTION("Invalid response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0xFF}; // Invalid response type
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE_FALSE(result.hasValue());
+        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+    }
+    
+    SECTION("Another invalid response type") {
+        std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x00}; // Invalid response type
+        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        
+        auto result = getResponseType(dataBuffer);
+        REQUIRE_FALSE(result.hasValue());
+        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+    }
 }

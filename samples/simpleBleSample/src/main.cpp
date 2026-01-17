@@ -107,6 +107,9 @@ int main() {
 
                     std::cout << "Cells Info:" << std::endl;
                     for (size_t i = 0; i < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; i++) {
+                        if (cellsInfo.value().cellVoltages_mV[i] == 0) {
+                            break;
+                        }
                         std::cout << "  Cell " << (i + 1) << ": " 
                             << cellsInfo.value().cellVoltages_mV[i] << " mV" << std::endl;
                     }
@@ -116,6 +119,15 @@ int main() {
                         << cellsInfo.value().batteryPower_mW << " mW" << std::endl;
                     std::cout << "  Charge Current: " 
                         << cellsInfo.value().chargeCurrent_mA << " mA" << std::endl;
+                    std::cout << "  Temperature Sensor 1: " 
+                        << cellsInfo.value().temperatureSensor1/10.0f << " °C" << std::endl;
+                    std::cout << "  Temperature Sensor 2: " 
+                        << cellsInfo.value().temperatureSensor2/10.0f << " °C" << std::endl;
+                    std::cout << "  Balance Current: " 
+                        << cellsInfo.value().balanceCurrent_mA << " mA action = " 
+                        << (int)cellsInfo.value().balanceAction << std::endl;
+                    std::cout << "  State of Charge: " 
+                        << (int)cellsInfo.value().batteryPercentage << " %" << std::endl;
                     break;
                 } else if (status == std::future_status::timeout) {
                     std::cout << "Timeout occurred! The task is still running.\n";

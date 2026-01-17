@@ -27,6 +27,10 @@ namespace JkBmsCpp {
             constexpr static size_t CELL_COUNT = 32;
             uint16_t cellVoltages_mV[CELL_COUNT];
             uint32_t enabledCellMask;
+            uint16_t averageCellVoltage_mV;
+            uint16_t deltaCellVoltage_mV;
+            uint8_t maxVoltageCellIndex;
+            uint8_t minVoltageCellIndex;
             uint16_t cellResistances_mOhm[CELL_COUNT];
             int16_t powerTubeTemperature;
             uint32_t wireResistanceWarningMask;
@@ -65,6 +69,25 @@ namespace JkBmsCpp {
             JkBmsString userData;
             JkBmsString setupPasscode;
     };
+
+    inline uint16_t getUInt16LE(const uint8_t* data, size_t pos) {
+        return (uint16_t)data[pos] | ((uint16_t)data[pos + 1] << 8);
+    }
+    inline int16_t getInt16LE(const uint8_t* data, size_t pos) {
+        return static_cast<int32_t>(data[pos] | ((uint16_t)data[pos + 1] << 8));
+    }
+    inline uint32_t getUInt32LE(const uint8_t* data, size_t pos) {
+        return (uint32_t)data[pos] | 
+            ((uint32_t)data[pos + 1] << 8) | 
+            ((uint32_t)data[pos + 2] << 16) | 
+            ((uint32_t)data[pos + 3] << 24);
+    }
+    inline int32_t getInt32LE(const uint8_t* data, size_t pos) {
+        return static_cast<int32_t>(data[pos] | 
+            ((uint32_t)data[pos + 1] << 8) | 
+            ((uint32_t)data[pos + 2] << 16) | 
+            ((uint32_t)data[pos + 3] << 24));
+    }
 
     Expected<JkBmsResponseType, JkBmsControllerError> getResponseType(
         const JkBmsDataBuffer& buffer
