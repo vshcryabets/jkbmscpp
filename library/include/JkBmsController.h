@@ -1,24 +1,19 @@
-#include <cstdint>
 #pragma once
-#ifdef JKBMSCPP_USE_STD_STRING
-#include <string>
-#endif
+
+#include <cstdint>
+#include <future>
+#include <memory>
+
+#include "JkBmsFrames.h"
+#include "CppWrappers.h"
 
 namespace JkBmsCpp {
-#ifdef JKBMSCPP_USE_STD_STRING    
-    typedef std::string JkBmsString;
-#else
-    typedef const char* JkBmsString;
-#endif
 
-    enum class JkBmsSourceError: uint8_t {
-        SUCCESS = 0,
-    };
+    typedef std::future<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoFuture;
+    typedef std::promise<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoPromise;
 
-    enum class JkBmsControllerError: uint8_t {
-        SUCCESS = 0,
-        ERROR_NO_SOURCE = 1,
-    };
+    typedef std::future<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoFuture;
+    typedef std::promise<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoPromise;
 
     class JkBmsSource {
     public:
@@ -26,8 +21,7 @@ namespace JkBmsCpp {
         virtual JkBmsSourceError connect() = 0;
         virtual JkBmsSourceError disconnect() = 0;
         virtual JkBmsSourceError sendCommand(
-            const uint8_t* data, 
-            const uint16_t size,
+            const JkBmsDataBuffer& command,
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid
         ) = 0;
@@ -35,7 +29,7 @@ namespace JkBmsCpp {
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid,
             void* context,
-            void(*callback)(void* context, const uint8_t* data, const uint16_t size)
+            void(*callback)(void* context, const JkBmsDataBuffer &data)
         ) = 0;
         virtual JkBmsSourceError unsubscribe(
             const JkBmsString& service_uuid,
@@ -49,19 +43,25 @@ namespace JkBmsCpp {
     public:
         const static JkBmsString SERVICE_UUID;
         const static JkBmsString CHARACTERISTIC_UUID;
+        constexpr static size_t MAX_PACKET_SIZE = 320;
+        constexpr static size_t DEFAULT_PACKET_SIZE = 300;
     private:
         JkBmsSource* source;
+        JkBmsByteBuffer responseBuffer;
+        std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
+        std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;
+
         static void notificationCallback(
             void* ctx,
-            const uint8_t* data,
-            const uint16_t size);
-        void handleResponse(const uint8_t* data, const uint16_t size);
+           const JkBmsDataBuffer &data);
+        void handleResponse(const JkBmsDataBuffer &data);
     public:
         JkBmsController();
         virtual void start(JkBmsSource* source);
         virtual void end();
         ~JkBmsController();
-        virtual JkBmsControllerError readDeviceState();
+        virtual DeviceInfoFuture readDeviceState();
+        virtual CellInfoFuture readCellsState();
     };
 
 };
