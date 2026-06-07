@@ -258,7 +258,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
-        REQUIRE(result.value() == JkBmsResponseType::CELL_INFO);
+        REQUIRE(result.value() == ResponseType::CELL_INFO);
     }
     
     SECTION("Valid DEVICE_INFO response type") {
@@ -267,7 +267,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
-        REQUIRE(result.value() == JkBmsResponseType::DEVICE_INFO);
+        REQUIRE(result.value() == ResponseType::DEVICE_INFO);
     }
     
     SECTION("Valid SETTINGS response type") {
@@ -276,7 +276,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
-        REQUIRE(result.value() == JkBmsResponseType::SETTINGS);
+        REQUIRE(result.value() == ResponseType::SETTINGS);
     }
     
     SECTION("Invalid magic bytes") {
@@ -285,7 +285,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == JkBmsControllerError::INVALID_MAGIC_BYTES);
+        REQUIRE(result.error() == ControllerError::INVALID_MAGIC_BYTES);
     }
     
     SECTION("Buffer too small") {
@@ -294,7 +294,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == JkBmsControllerError::INVALID_MAGIC_BYTES);
+        REQUIRE(result.error() == ControllerError::INVALID_MAGIC_BYTES);
     }
     
     SECTION("Buffer exactly 4 bytes - missing response type") {
@@ -303,7 +303,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
     }
     
     SECTION("Invalid response type") {
@@ -312,7 +312,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
     }
     
     SECTION("Another invalid response type") {
@@ -321,6 +321,6 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == JkBmsControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
     }
 }

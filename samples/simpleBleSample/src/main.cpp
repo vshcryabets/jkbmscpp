@@ -70,7 +70,7 @@ int main() {
         std::cout << "Connecting to " << selected_peripheral.identifier() << "..." << std::endl;
 
         JkBmsSourceSimpleBleImpl source(selected_peripheral);
-        JkBmsCpp::JkBmsController controller;
+        JkBmsCpp::Controller controller;
         
         controller.start(&source);
 
@@ -106,7 +106,7 @@ int main() {
                     auto cellsInfo = fut.get();
 
                     std::cout << "Cells Info:" << std::endl;
-                    for (size_t cell = 0; cell < JkBmsCpp::JkBmsCellInfoResponse::CELL_COUNT; cell++) {
+                    for (size_t cell = 0; cell < JkBmsCpp::CellInfoResponse::CELL_COUNT; cell++) {
                         if (cellsInfo.value().cellVoltages_mV[cell] == 0) {
                             break;
                         }

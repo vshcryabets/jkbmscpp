@@ -9,36 +9,36 @@
 
 namespace JkBmsCpp {
 
-    typedef std::future<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoFuture;
-    typedef std::promise<Expected<JkBmsDeviceInfoResponse, JkBmsControllerError>> DeviceInfoPromise;
+    typedef std::future<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoFuture;
+    typedef std::promise<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoPromise;
 
-    typedef std::future<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoFuture;
-    typedef std::promise<Expected<JkBmsCellInfoResponse, JkBmsControllerError>> CellInfoPromise;
+    typedef std::future<Expected<CellInfoResponse, ControllerError>> CellInfoFuture;
+    typedef std::promise<Expected<CellInfoResponse, ControllerError>> CellInfoPromise;
 
-    class JkBmsSource {
+    class Source {
     public:
-        virtual ~JkBmsSource() = default;
-        virtual JkBmsSourceError connect() = 0;
-        virtual JkBmsSourceError disconnect() = 0;
-        virtual JkBmsSourceError sendCommand(
+        virtual ~Source() = default;
+        virtual SourceError connect() = 0;
+        virtual SourceError disconnect() = 0;
+        virtual SourceError sendCommand(
             const JkBmsDataBuffer& command,
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid
         ) = 0;
-        virtual JkBmsSourceError subscribe(
+        virtual SourceError subscribe(
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid,
             void* context,
             void(*callback)(void* context, const JkBmsDataBuffer &data)
         ) = 0;
-        virtual JkBmsSourceError unsubscribe(
+        virtual SourceError unsubscribe(
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid
         ) = 0;
         virtual size_t getMtu() = 0;
     };
 
-    class JkBmsController
+    class Controller
     {
     public:
         const static JkBmsString SERVICE_UUID;
@@ -46,7 +46,7 @@ namespace JkBmsCpp {
         constexpr static size_t MAX_PACKET_SIZE = 320;
         constexpr static size_t DEFAULT_PACKET_SIZE = 300;
     private:
-        JkBmsSource* source;
+        Source* source;
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
         std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;
@@ -56,10 +56,10 @@ namespace JkBmsCpp {
            const JkBmsDataBuffer &data);
         void handleResponse(const JkBmsDataBuffer &data);
     public:
-        JkBmsController();
-        virtual void start(JkBmsSource* source);
+        Controller();
+        virtual void start(Source* source);
         virtual void end();
-        ~JkBmsController();
+        ~Controller();
         virtual DeviceInfoFuture readDeviceState();
         virtual CellInfoFuture readCellsState();
     };

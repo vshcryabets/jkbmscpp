@@ -29,7 +29,7 @@ across the following platforms and architectures:
 
 - Linux x86
 
-- Armbian (Specifically tested on Orange Pi Zero 2W)
+- Armbian (Specifically tested on Orange Pi Zero 2W/3)
 
 ## Build instructions
 

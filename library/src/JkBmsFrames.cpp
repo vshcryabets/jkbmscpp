@@ -3,23 +3,23 @@
 
 namespace JkBmsCpp {
 
-    Expected<JkBmsCellInfoResponse, JkBmsControllerError> parseCellsInfo(
+    Expected<CellInfoResponse, ControllerError> parseCellsInfo(
         const JkBmsDataBuffer& buffer) {
         if (!checkFrameStart(buffer)) {
-            return JkBmsControllerError::INVALID_MAGIC_BYTES;
+            return ControllerError::INVALID_MAGIC_BYTES;
         }
         if (!checkFrameChecksum(buffer)) {
-            return JkBmsControllerError::CRC_MISMATCH;
+            return ControllerError::CRC_MISMATCH;
         }
         if (buffer.size() != 300) {
-            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+            return ControllerError::INVALID_RESPONSE_TYPE;
         }
         const uint8_t* data = (const uint8_t*)buffer.data();
-        if (buffer.data()[4] != static_cast<uint8_t>(JkBmsResponseType::CELL_INFO)) {
-            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        if (buffer.data()[4] != static_cast<uint8_t>(ResponseType::CELL_INFO)) {
+            return ControllerError::INVALID_RESPONSE_TYPE;
         }
-        JkBmsCellInfoResponse response;
-        uint8_t cellCount = JkBmsCellInfoResponse::CELL_COUNT;
+        CellInfoResponse response;
+        uint8_t cellCount = CellInfoResponse::CELL_COUNT;
         uint16_t pos = 6;
 
         // read cell voltages
@@ -75,22 +75,22 @@ namespace JkBmsCpp {
         return response;
     }
 
-    Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
+    Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
         const JkBmsDataBuffer& buffer) {
         if (!checkFrameStart(buffer)) {
-            return JkBmsControllerError::INVALID_MAGIC_BYTES;
+            return ControllerError::INVALID_MAGIC_BYTES;
         }
         if (!checkFrameChecksum(buffer)) {
-            return JkBmsControllerError::CRC_MISMATCH;
+            return ControllerError::CRC_MISMATCH;
         }
         if (buffer.size() != 300) {
-            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+            return ControllerError::INVALID_RESPONSE_TYPE;
         }
         const char* data = (const char*)buffer.data();
-        if (data[4] != static_cast<char>(JkBmsResponseType::DEVICE_INFO)) {
-            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+        if (data[4] != static_cast<char>(ResponseType::DEVICE_INFO)) {
+            return ControllerError::INVALID_RESPONSE_TYPE;
         }
-        JkBmsDeviceInfoResponse response;
+        DeviceInfoResponse response;
         // Parsing logic to extract fields from buffer
         response.vendorId = JkBmsString(data + 6, strnlen(data + 6, 16));
         response.hwVersion = JkBmsString(data + 22, strnlen(data + 22, 8));
@@ -127,24 +127,24 @@ namespace JkBmsCpp {
         return checksum == data[buffer.size() - 1];
     }
 
-    Expected<JkBmsResponseType, JkBmsControllerError> getResponseType(
+    Expected<ResponseType, ControllerError> getResponseType(
         const JkBmsDataBuffer& buffer
     ) {
         if (!checkFrameStart(buffer)) {
-            return JkBmsControllerError::INVALID_MAGIC_BYTES;
+            return ControllerError::INVALID_MAGIC_BYTES;
         }
         if (buffer.size() < 5) {
-            return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+            return ControllerError::INVALID_RESPONSE_TYPE;
         }
         const uint8_t* data = buffer.data();
-        JkBmsResponseType responseType = static_cast<JkBmsResponseType>(data[4]);
+        ResponseType responseType = static_cast<ResponseType>(data[4]);
         switch (responseType) {
-            case JkBmsResponseType::SETTINGS:
-            case JkBmsResponseType::CELL_INFO:
-            case JkBmsResponseType::DEVICE_INFO:
+            case ResponseType::SETTINGS:
+            case ResponseType::CELL_INFO:
+            case ResponseType::DEVICE_INFO:
                 return responseType;
             default:
-                return JkBmsControllerError::INVALID_RESPONSE_TYPE;
+                return ControllerError::INVALID_RESPONSE_TYPE;
         }
     }
 
@@ -156,12 +156,12 @@ namespace JkBmsCpp {
         return crc;
     }
 
-    JkBmsControllerError prepareCommandBuffer(uint8_t reg, 
+    ControllerError prepareCommandBuffer(uint8_t reg, 
         uint32_t value,
         uint8_t length,
         const JkBmsDataBuffer& outBuffer) {
         if (outBuffer.size() < 20) {
-            return JkBmsControllerError::BUFFER_TOO_SMALL;
+            return ControllerError::BUFFER_TOO_SMALL;
         }
         constexpr size_t CRC_FRAME_SIZE = 19;
         uint8_t* frame = outBuffer.data();
@@ -177,6 +177,6 @@ namespace JkBmsCpp {
         frame[8] = value >> 16;
         frame[9] = value >> 24;
         frame[19] = calculateCRC(JkBmsDataBuffer(frame, CRC_FRAME_SIZE));
-        return JkBmsControllerError::SUCCESS;
+        return ControllerError::SUCCESS;
     }
 };

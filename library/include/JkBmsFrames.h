@@ -3,11 +3,11 @@
 #include "CppWrappers.h"
 
 namespace JkBmsCpp {
-    enum class JkBmsSourceError: uint8_t {
+    enum class SourceError: uint8_t {
         SUCCESS = 0,
     };
 
-    enum class JkBmsControllerError: uint8_t {
+    enum class ControllerError: uint8_t {
         SUCCESS = 0,
         ERROR_NO_SOURCE = 1,
         CRC_MISMATCH = 2,
@@ -16,13 +16,13 @@ namespace JkBmsCpp {
         BUFFER_TOO_SMALL = 5,
     };
 
-    enum class JkBmsResponseType: uint8_t {
+    enum class ResponseType: uint8_t {
         SETTINGS = 0x01,
         CELL_INFO = 0x02,
         DEVICE_INFO = 0x03,
     };
 
-    class JkBmsCellInfoResponse {
+    class CellInfoResponse {
         public:
             constexpr static size_t CELL_COUNT = 32;
             uint16_t cellVoltages_mV[CELL_COUNT];
@@ -54,7 +54,7 @@ namespace JkBmsCpp {
             uint16_t emergencyTimeCountdown_s;
     };
 
-    class JkBmsDeviceInfoResponse {
+    class DeviceInfoResponse {
         public:
             JkBmsString vendorId;
             JkBmsString hwVersion;
@@ -89,19 +89,19 @@ namespace JkBmsCpp {
             ((uint32_t)data[pos + 3] << 24));
     }
 
-    Expected<JkBmsResponseType, JkBmsControllerError> getResponseType(
+    Expected<ResponseType, ControllerError> getResponseType(
         const JkBmsDataBuffer& buffer
     );
     bool checkFrameStart(const JkBmsDataBuffer& buffer);
     bool checkFrameChecksum(const JkBmsDataBuffer& buffer);
-    Expected<JkBmsDeviceInfoResponse, JkBmsControllerError> parseDeviceInfo(
+    Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
         const JkBmsDataBuffer& buffer
     );
-    Expected<JkBmsCellInfoResponse, JkBmsControllerError> parseCellsInfo(
+    Expected<CellInfoResponse, ControllerError> parseCellsInfo(
         const JkBmsDataBuffer& buffer
     );
     uint8_t calculateCRC(const JkBmsDataBuffer& buffer);
-    JkBmsControllerError prepareCommandBuffer(uint8_t reg, 
+    ControllerError prepareCommandBuffer(uint8_t reg, 
         uint32_t value,
         uint8_t length,
         const JkBmsDataBuffer& outBuffer);
