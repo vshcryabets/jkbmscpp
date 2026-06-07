@@ -123,7 +123,9 @@ void Controller::handleResponse(const JkBmsDataBuffer &data) {
                 {
                     if (pendingCellInfoRequest) {
                         auto cellInfo = parseCellsInfo(
-                            JkBmsDataBuffer(responseBuffer.data(), responseBuffer.size()));
+                            JkBmsDataBuffer(responseBuffer.data(), responseBuffer.size()),
+                            CellInfoResponse::CELL_COUNT
+                        );
                         pendingCellInfoRequest->set_value(cellInfo);
                         pendingCellInfoRequest.reset();
                     }

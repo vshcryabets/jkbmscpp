@@ -168,21 +168,21 @@ TEST_CASE("parseDeviceInfo", "[JkBmsFrames]") {
 TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     JkBmsCpp::JkBmsDataBuffer buffer((uint8_t*)SAMPLE_CELL_INFO_FRAME, 
         sizeof(SAMPLE_CELL_INFO_FRAME));
-    auto cellsInfo = JkBmsCpp::parseCellsInfo(buffer);
+    auto cellsInfo = JkBmsCpp::parseCellsInfo(buffer, CellInfoResponse::CELL_COUNT);
     REQUIRE(cellsInfo.hasValue() == true);
     auto& info = cellsInfo.value();
     REQUIRE(info.cellVoltages_mV[0] == 3327);
-    REQUIRE(info.cellVoltages_mV[1] == 0xcff);
-    REQUIRE(info.cellVoltages_mV[2] == 0xcff);
+    REQUIRE(info.cellVoltages_mV[1] == 3327);
+    REQUIRE(info.cellVoltages_mV[2] == 3327);
     REQUIRE(info.cellVoltages_mV[3] == 3326);
-    REQUIRE(info.cellVoltages_mV[4] == 0xcff);
+    REQUIRE(info.cellVoltages_mV[4] == 3327);
     REQUIRE(info.cellVoltages_mV[5] == 3326);
     REQUIRE(info.cellVoltages_mV[6] == 3326);
     REQUIRE(info.cellVoltages_mV[7] == 3326);
     REQUIRE(info.cellVoltages_mV[8] == 0x00);
 
     REQUIRE(info.enabledCellMask == 0xFF);
-    REQUIRE(info.averageCellVoltage_mV== 0x0cfe);
+    REQUIRE(info.averageCellVoltage_mV== 3326);
     REQUIRE(info.deltaCellVoltage_mV== 0x0003);
     REQUIRE(info.maxVoltageCellIndex== 0x00);
     REQUIRE(info.minVoltageCellIndex== 0x01);
@@ -206,9 +206,7 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     REQUIRE(info.balanceCurrent_mA == 0);
     REQUIRE(info.balanceAction == 0);
 
-
     REQUIRE(info.batteryPower_mW == 4940);
-
 
     REQUIRE(info.batteryPercentage == 99);
     REQUIRE(info.remainingCapacity_mAh == 74108);

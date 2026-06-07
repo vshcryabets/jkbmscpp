@@ -97,9 +97,12 @@ namespace JkBmsCpp {
     Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
         const JkBmsDataBuffer& buffer
     );
-    Expected<CellInfoResponse, ControllerError> parseCellsInfo(
-        const JkBmsDataBuffer& buffer
+    Expected<CellInfoResponse, ControllerError> 
+    parseCellsInfo(
+        const JkBmsDataBuffer& buffer,
+        uint8_t cellCount
     );
+    
     uint8_t calculateCRC(const JkBmsDataBuffer& buffer);
     ControllerError prepareCommandBuffer(uint8_t reg, 
         uint32_t value,

@@ -3,8 +3,11 @@
 
 namespace JkBmsCpp {
 
-    Expected<CellInfoResponse, ControllerError> parseCellsInfo(
-        const JkBmsDataBuffer& buffer) {
+    Expected<CellInfoResponse, ControllerError> 
+    parseCellsInfo(
+        const JkBmsDataBuffer& buffer,
+        uint8_t cellCount
+    ) {
         if (!checkFrameStart(buffer)) {
             return ControllerError::INVALID_MAGIC_BYTES;
         }
@@ -19,7 +22,6 @@ namespace JkBmsCpp {
             return ControllerError::INVALID_RESPONSE_TYPE;
         }
         CellInfoResponse response;
-        uint8_t cellCount = CellInfoResponse::CELL_COUNT;
         uint16_t pos = 6;
 
         // read cell voltages
@@ -61,9 +63,11 @@ namespace JkBmsCpp {
         pos += 2;
         response.balanceAction = data[pos++];
         response.batteryPercentage = data[pos++];
+        response.remainingCapacity_mAh = getUInt32LE(data, pos);
+        pos += 4;
+        response.fullCapacity_mAh = getUInt32LE(data, pos);
+        pos += 4;
         // not yet implemented fields
-        response.remainingCapacity_mAh = 0;
-        response.fullCapacity_mAh = 0;
         response.cycleCount = 0;
         response.totalCycleCapacity_mAh = 0;
         response.sohPercentage = 0;
