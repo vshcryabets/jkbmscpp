@@ -12,7 +12,7 @@ const JkBmsString Controller::SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34
 const JkBmsString Controller::CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
 
 
-Controller::Controller()
+Controller::Controller() : source(nullptr)
 {
     responseBuffer.reserve(MAX_PACKET_SIZE);
 }
