@@ -8,6 +8,11 @@
 
 constexpr uint32_t BLE_SCAN_INTERVAL_MS = 5000;
 
+BleScanner::BleScanner()
+{
+    runningMutex_ = xSemaphoreCreateMutex();
+}
+
 void BleScanner::init()
 {
     BLEDevice::init("");
@@ -16,13 +21,13 @@ void BleScanner::init()
 
 void BleScanner::startScan(uint8_t scanTimeSeconds, Listener* listener)
 {
-    if (running_) {
+    if (isRunning()) {
         return;
     }
 
     scanTimeSeconds_ = scanTimeSeconds;
     listener_ = listener;
-    running_ = true;
+    setRunning(true);
 
     xTaskCreate(
         BleScanner::scanTaskEntry,
@@ -35,7 +40,7 @@ void BleScanner::startScan(uint8_t scanTimeSeconds, Listener* listener)
 
 void BleScanner::stopScan()
 {
-    running_ = false;
+    setRunning(false);
 }
 
 void BleScanner::scanTaskEntry(void* parameter)
@@ -51,7 +56,7 @@ void BleScanner::scanTaskLoop()
     bleScan->setInterval(100);
     bleScan->setWindow(99);
 
-    while (running_) {
+    while (isRunning()) {
         Serial.println("Starting BLE scan...");
 
         BLEScanResults scanResults = bleScan->start(scanTimeSeconds_, false);
@@ -93,7 +98,7 @@ void BleScanner::scanTaskLoop()
             Serial.println(result.rssi);
         }
 
-        if (listener_ != nullptr && running_) {
+        if (listener_ != nullptr && isRunning()) {
             listener_->onDevicesScanned(results);
         }
 
@@ -104,4 +109,28 @@ void BleScanner::scanTaskLoop()
 
     scanHandle_ = nullptr;
     vTaskDelete(nullptr);
+}
+
+bool BleScanner::isRunning()
+{
+    if (runningMutex_ == nullptr) {
+        return running_;
+    }
+
+    xSemaphoreTake(runningMutex_, portMAX_DELAY);
+    const bool running = running_;
+    xSemaphoreGive(runningMutex_);
+    return running;
+}
+
+void BleScanner::setRunning(bool running)
+{
+    if (runningMutex_ == nullptr) {
+        running_ = running;
+        return;
+    }
+
+    xSemaphoreTake(runningMutex_, portMAX_DELAY);
+    running_ = running;
+    xSemaphoreGive(runningMutex_);
 }

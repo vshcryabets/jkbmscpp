@@ -3,11 +3,75 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include "ScanScreen.h"
+#include "ScanScreenController.h"
+#include "TouchController.h"
 #include "BleScanner.h"
+#include "ViewModel.h"
 
 TFT_eSPI tft = TFT_eSPI();
 Display display(&tft);
-State state;
+
+class UiStateObserver : public ViewModel::Observer {
+public:
+  void onStateChanged() override
+  {
+    hasUpdate_ = true;
+  }
+
+  bool consumeUpdateFlag()
+  {
+    const bool hasUpdate = hasUpdate_;
+    hasUpdate_ = false;
+    return hasUpdate;
+  }
+
+private:
+  volatile bool hasUpdate_ = true;
+};
+
+class TouchEventHandler : public TouchController::Listener {
+public:
+  explicit TouchEventHandler(ScanScreenController& screenController)
+      : screenController_(screenController)
+  {
+  }
+
+  void onTouch(int16_t x, int16_t y) override
+  {
+    // Serial.print("touch ");
+    // // Serial.print(x);
+    // // Serial.print(",");
+    // Serial.println(y);
+  }
+
+  void onClick(int16_t x, int16_t y) override
+  {
+    // Serial.print("click ");
+    // Serial.println(y);
+    if (y < 650) {
+      screenController_.scrollUp();
+    } else if (y > 3200) {
+      screenController_.scrollDown();
+    }
+    hasUiUpdate_ = true;
+  }
+
+  void onNoTouch() override
+  {
+    // Placeholder hook for ending drag/press interactions.
+  }
+
+  bool consumeUiUpdateFlag()
+  {
+    const bool hasUpdate = hasUiUpdate_;
+    hasUiUpdate_ = false;
+    return hasUpdate;
+  }
+
+private:
+  ScanScreenController& screenController_;
+  bool hasUiUpdate_ = false;
+};
 
 #define XPT2046_IRQ 36
 #define XPT2046_MOSI 32
@@ -21,6 +85,12 @@ SPIClass mySpi = SPIClass(VSPI);
 XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
 BleScanner bleScanner;
+ViewModel viewModel;
+UiStateObserver uiStateObserver;
+ScanScreenController scanScreenController(viewModel);
+TouchEventHandler touchEventHandler(scanScreenController);
+TouchController::Config touchConfig;
+TouchController touchController(&touchEventHandler, touchConfig);
 
 void setup()
 {
@@ -36,30 +106,27 @@ void setup()
   tft.begin(); 
   tft.setRotation(0);
 
+  viewModel.addObserver(&uiStateObserver);
   bleScanner.init();
-  bleScanner.startScan(3, nullptr);
-}
-
-
-void printTouchToSerial(TS_Point p) {
-  Serial.print("Pressure = ");
-  Serial.print(p.z);
-  Serial.print(", x = ");
-  Serial.print(p.x);
-  Serial.print(", y = ");
-  Serial.print(p.y);
-  Serial.println();
+  //bleScanner.startScan(15, &viewModel);
 }
 
 void loop()
 {
+  bool shouldRender = uiStateObserver.consumeUpdateFlag();
+
   if (ts.tirqTouched() && ts.touched()) {
     TS_Point p = ts.getPoint();
-    printTouchToSerial(p);
+    touchController.updateTouch(static_cast<int16_t>(p.x), static_cast<int16_t>(p.y));
+  } else {
+    touchController.updateNoTouch();
   }
 
-  if (state.isDirty) {
-    DrawScanScreen(display, state);
-    state.isDirty = false;
+  shouldRender = shouldRender || touchEventHandler.consumeUiUpdateFlag();
+
+  if (shouldRender) {
+    const State appState = viewModel.getStateCopy();
+    const ScanScreenViewState viewState { &appState, &scanScreenController.getUiState() };
+    DrawScanScreen(display, viewState);
   }
 }

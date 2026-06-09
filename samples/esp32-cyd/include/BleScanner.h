@@ -1,5 +1,7 @@
 #pragma once
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <vector>
 #include <cstdint>
 
@@ -13,9 +15,10 @@ public:
     class Listener {
     public:
         virtual ~Listener() = default;
-        virtual void onDevicesScanned(std::vector<ScanResult>) = 0;
+        virtual void onDevicesScanned(const std::vector<ScanResult>& results) = 0;
     };
 public:
+    BleScanner();
     void init();
     void startScan(uint8_t scanTimeSeconds, Listener* listener);
     void stopScan();
@@ -23,10 +26,13 @@ public:
 private:
     static void scanTaskEntry(void* parameter);
     void scanTaskLoop();
+    bool isRunning();
+    void setRunning(bool running);
 
 private:
     TaskHandle_t scanHandle_ = nullptr;
     uint8_t scanTimeSeconds_ = 3;
     Listener* listener_ = nullptr;
+    SemaphoreHandle_t runningMutex_ = nullptr;
     bool running_ = false;
 };
