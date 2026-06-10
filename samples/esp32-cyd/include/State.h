@@ -12,6 +12,5 @@ enum class Screen: uint8_t {
 
 struct State {
     Screen currentScreen { Screen::Scanner };
-    int selectedDeviceIndex { -1 };
     std::vector<BleScanner::ScanResult> scanResults;
 };

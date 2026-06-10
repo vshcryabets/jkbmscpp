@@ -3,7 +3,6 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include "ScanScreen.h"
-#include "ScanScreenController.h"
 #include "TouchController.h"
 #include "BleScanner.h"
 #include "ViewModel.h"
@@ -29,50 +28,6 @@ private:
   volatile bool hasUpdate_ = true;
 };
 
-class TouchEventHandler : public TouchController::Listener {
-public:
-  explicit TouchEventHandler(ScanScreenController& screenController)
-      : screenController_(screenController)
-  {
-  }
-
-  void onTouch(int16_t x, int16_t y) override
-  {
-    // Serial.print("touch ");
-    // // Serial.print(x);
-    // // Serial.print(",");
-    // Serial.println(y);
-  }
-
-  void onClick(int16_t x, int16_t y) override
-  {
-    // Serial.print("click ");
-    // Serial.println(y);
-    if (y < 650) {
-      screenController_.scrollUp();
-    } else if (y > 3200) {
-      screenController_.scrollDown();
-    }
-    hasUiUpdate_ = true;
-  }
-
-  void onNoTouch() override
-  {
-    // Placeholder hook for ending drag/press interactions.
-  }
-
-  bool consumeUiUpdateFlag()
-  {
-    const bool hasUpdate = hasUiUpdate_;
-    hasUiUpdate_ = false;
-    return hasUpdate;
-  }
-
-private:
-  ScanScreenController& screenController_;
-  bool hasUiUpdate_ = false;
-};
-
 #define XPT2046_IRQ 36
 #define XPT2046_MOSI 32
 #define XPT2046_MISO 39
@@ -87,10 +42,12 @@ XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 BleScanner bleScanner;
 ViewModel viewModel;
 UiStateObserver uiStateObserver;
-ScanScreenController scanScreenController(viewModel);
-TouchEventHandler touchEventHandler(scanScreenController);
-TouchController::Config touchConfig;
-TouchController touchController(&touchEventHandler, touchConfig);
+ScanScreenViewModel scanScreenViewModel(viewModel);
+ScanScreenTouchEventHandler touchEventHandler(scanScreenViewModel);
+TouchController touchController(&touchEventHandler, {
+  .clickMoveThresholdPx = 120,
+  .maxClickDurationMs = 500,
+});
 
 void setup()
 {
@@ -108,7 +65,7 @@ void setup()
 
   viewModel.addObserver(&uiStateObserver);
   bleScanner.init();
-  //bleScanner.startScan(15, &viewModel);
+  bleScanner.startScan(3, 10, &viewModel);
 }
 
 void loop()
@@ -126,7 +83,7 @@ void loop()
 
   if (shouldRender) {
     const State appState = viewModel.getStateCopy();
-    const ScanScreenViewState viewState { &appState, &scanScreenController.getUiState() };
+    const ScanScreenViewState viewState { &appState, &scanScreenViewModel.getUiState() };
     DrawScanScreen(display, viewState);
   }
 }

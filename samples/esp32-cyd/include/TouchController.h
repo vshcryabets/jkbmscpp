@@ -4,16 +4,21 @@
 
 class TouchController {
 public:
+    enum class EventType: uint8_t {
+        Touch,
+        Click,
+        NoTouch,
+        OnDown,
+        OnUp,
+    };
     class Listener {
     public:
         virtual ~Listener() = default;
-        virtual void onTouch(int16_t x, int16_t y) = 0;
-        virtual void onClick(int16_t x, int16_t y) = 0;
-        virtual void onNoTouch() = 0;
+        virtual void onEvent(EventType eventType, int16_t x, int16_t y) = 0;
     };
 
     struct Config {
-        uint16_t clickMoveThresholdPx = 12;
+        uint8_t clickMoveThresholdPx = 12;
         uint32_t maxClickDurationMs = 300;
     };
 
@@ -30,7 +35,8 @@ private:
 
 private:
     Listener* listener_ = nullptr;
-    Config config_{};
+    uint16_t maxClickDurationMs;
+    uint16_t clickMoveThresholdSqrPx;
 
     bool touching_ = false;
     bool movedTooFar_ = false;

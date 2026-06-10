@@ -8,7 +8,7 @@
 class BleScanner {
 public:
     struct ScanResult {
-        char address[6];
+        uint8_t address[6];
         char name[32];
         int8_t rssi;
     };
@@ -20,7 +20,7 @@ public:
 public:
     BleScanner();
     void init();
-    void startScan(uint8_t scanTimeSeconds, Listener* listener);
+    void startScan(uint8_t scanTimeSeconds, uint8_t scanPeriodSeconds, Listener* listener);
     void stopScan();
 
 private:
@@ -32,6 +32,7 @@ private:
 private:
     TaskHandle_t scanHandle_ = nullptr;
     uint8_t scanTimeSeconds_ = 3;
+    uint8_t scanPeriodSeconds_ = 5;
     Listener* listener_ = nullptr;
     SemaphoreHandle_t runningMutex_ = nullptr;
     bool running_ = false;

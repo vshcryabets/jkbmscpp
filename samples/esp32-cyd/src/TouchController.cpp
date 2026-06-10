@@ -3,7 +3,9 @@
 #include <Arduino.h>
 
 TouchController::TouchController(Listener* listener, const Config& config)
-    : listener_(listener), config_(config)
+    : listener_(listener), 
+    maxClickDurationMs(config.maxClickDurationMs),
+    clickMoveThresholdSqrPx(config.clickMoveThresholdPx * config.clickMoveThresholdPx)
 {
 }
 
@@ -20,21 +22,24 @@ void TouchController::updateTouch(int16_t x, int16_t y)
         startX_ = x;
         startY_ = y;
         touchStartMs_ = millis();
+
+        if (listener_ != nullptr) {
+            listener_->onEvent(EventType::OnDown, x, y);
+        }
     }
 
     lastX_ = x;
     lastY_ = y;
 
-    const int dx = static_cast<int>(x) - static_cast<int>(startX_);
-    const int dy = static_cast<int>(y) - static_cast<int>(startY_);
+    const int dx = x - startX_;
+    const int dy = y - startY_;
     const uint32_t distanceSquared = static_cast<uint32_t>(dx * dx + dy * dy);
-    const uint32_t thresholdSquared = static_cast<uint32_t>(config_.clickMoveThresholdPx) * static_cast<uint32_t>(config_.clickMoveThresholdPx);
-    if (distanceSquared > thresholdSquared) {
+    if (distanceSquared > clickMoveThresholdSqrPx) {
         movedTooFar_ = true;
     }
 
     if (listener_ != nullptr) {
-        listener_->onTouch(x, y);
+        listener_->onEvent(EventType::Touch, x, y);
     }
 }
 
@@ -53,11 +58,13 @@ void TouchController::updateNoTouch()
         return;
     }
 
+    listener_->onEvent(EventType::OnUp, lastX_, lastY_);
+
     if (isClick) {
-        listener_->onClick(lastX_, lastY_);
+        listener_->onEvent(EventType::Click, lastX_, lastY_);
     }
 
-    listener_->onNoTouch();
+    listener_->onEvent(EventType::NoTouch, lastX_, lastY_);
 }
 
 bool TouchController::isClickGesture(uint32_t releaseTimeMs) const
@@ -67,5 +74,5 @@ bool TouchController::isClickGesture(uint32_t releaseTimeMs) const
     }
 
     const uint32_t durationMs = releaseTimeMs - touchStartMs_;
-    return durationMs <= config_.maxClickDurationMs;
+    return durationMs <= maxClickDurationMs;
 }

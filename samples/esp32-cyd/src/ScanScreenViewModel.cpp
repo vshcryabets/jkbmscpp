@@ -1,28 +1,28 @@
-#include "ScanScreenController.h"
+#include "ScanScreen.h"
 
-ScanScreenController::ScanScreenController(ViewModel& viewModel)
+ScanScreenViewModel::ScanScreenViewModel(ViewModel& viewModel)
     : viewModel_(viewModel)
 {
 }
 
-const ScanScreenUiState& ScanScreenController::getUiState() const
+const ScanScreenUiState& ScanScreenViewModel::getUiState() const
 {
     return uiState_;
 }
 
-void ScanScreenController::scrollDown()
+void ScanScreenViewModel::scrollDown()
 {
     uiState_.listOffset += 1;
 }
 
-void ScanScreenController::scrollUp()
+void ScanScreenViewModel::scrollUp()
 {
     if (uiState_.listOffset > 0) {
         uiState_.listOffset -= 1;
     }
 }
 
-void ScanScreenController::onDeviceSelected()
+void ScanScreenViewModel::onDeviceSelected()
 {
     // const State appState = viewModel_.getStateCopy();
     // normalizeUiState(appState);

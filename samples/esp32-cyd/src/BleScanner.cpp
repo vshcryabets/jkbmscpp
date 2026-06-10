@@ -19,13 +19,17 @@ void BleScanner::init()
     Serial.println("BLE scanner initialized");
 }
 
-void BleScanner::startScan(uint8_t scanTimeSeconds, Listener* listener)
-{
+void BleScanner::startScan(
+    uint8_t scanTimeSeconds,
+    uint8_t scanPeriodSeconds,
+    Listener* listener
+) {
     if (isRunning()) {
         return;
     }
 
     scanTimeSeconds_ = scanTimeSeconds;
+    scanPeriodSeconds_ = scanPeriodSeconds;
     listener_ = listener;
     setRunning(true);
 
@@ -104,7 +108,7 @@ void BleScanner::scanTaskLoop()
 
         bleScan->clearResults();
         Serial.println("BLE scan complete\n");
-        vTaskDelay(pdMS_TO_TICKS(BLE_SCAN_INTERVAL_MS));
+        vTaskDelay(pdMS_TO_TICKS(scanPeriodSeconds_ * 1000));
     }
 
     scanHandle_ = nullptr;
