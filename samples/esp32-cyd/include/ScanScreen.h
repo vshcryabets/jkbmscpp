@@ -9,8 +9,8 @@
 
 struct UiLabel
 {
-  String title;
-  String subtitle;
+  char title[48];
+  char subtitle[24];
 };
 
 struct ScanScreenViewState

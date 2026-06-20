@@ -1,5 +1,8 @@
 #include "ScanScreen.h"
 
+#include <numeric>
+#include <algorithm>
+
 ScanScreenViewModel::ScanScreenViewModel(
     ViewModel &viewModel,
     StartScanUseCase &startScanUseCase,
@@ -24,7 +27,11 @@ void ScanScreenViewModel::scrollDown()
     xSemaphoreTake(stateMutex_, portMAX_DELAY);
     uiState_.listOffset += 1;
     if (uiState_.listOffset >= uiState_.items.size()) {
-        uiState_.listOffset = uiState_.items.size() - 1;
+        if (!uiState_.items.empty()) {
+            uiState_.listOffset = uiState_.items.size() - 1;
+        } else {
+            uiState_.listOffset = 0;
+        }
     }
     xSemaphoreGive(stateMutex_);
     if (observer_ != nullptr) {
@@ -55,16 +62,16 @@ void ScanScreenViewModel::onDevicesScanned(
 
     xSemaphoreTake(stateMutex_, portMAX_DELAY);
     uiState_.items.clear();
-    auto sortedResults = results;
-    std::sort(sortedResults.begin(), sortedResults.end(),
-        [](const BleScanner::ScanResult& a, const BleScanner::ScanResult& b) {
-            return a.rssi > b.rssi;
-        });
-    char addressSrt[19];
-    for (auto& result : sortedResults) {
+    std::vector<size_t> idx(results.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&](size_t a, size_t b) {
+        return results[a].rssi > results[b].rssi;
+    });
+    for (size_t i : idx) {
+        const auto& result = results[i];
         UiLabel label;
-        snprintf(addressSrt, 
-            sizeof(addressSrt), 
+        snprintf(label.subtitle, 
+            sizeof(label.subtitle), 
             "%02x:%02x:%02x:%02x:%02x:%02x", 
             result.address[0], 
             result.address[1], 
@@ -73,13 +80,20 @@ void ScanScreenViewModel::onDevicesScanned(
             result.address[4], 
             result.address[5]
         );
+        const size_t titleSize = sizeof(label.title);
         if (result.name[0] == '\0') {
-            label.title = String("Unknown");
+            strncpy(label.title, "Unknown", titleSize - 1);
+            label.title[titleSize - 1] = '\0';
         } else {
-            label.title = String(result.name);
+            strncpy(label.title, result.name, titleSize - 1);
+            label.title[titleSize - 1] = '\0';
         }
-        label.title = label.title + " (" + String(result.rssi) + " dBm)";
-        label.subtitle = String(addressSrt);
+        snprintf(
+            label.title + strlen(label.title), 
+            titleSize - strlen(label.title), 
+            " (%d dBm)", result.rssi
+        );
+
         uiState_.items.push_back(label);
     }
     xSemaphoreGive(stateMutex_);
