@@ -12,5 +12,4 @@ enum class Screen: uint8_t {
 
 struct State {
     Screen currentScreen { Screen::Scanner };
-    std::vector<BleScanner::ScanResult> scanResults;
 };

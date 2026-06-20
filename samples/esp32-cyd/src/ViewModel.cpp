@@ -92,21 +92,6 @@ void ViewModel::setCurrentScreen(Screen screen)
     }
 }
 
-void ViewModel::onDevicesScanned(const std::vector<BleScanner::ScanResult>& results)
-{
-    if (stateMutex_ == nullptr) {
-        state_.scanResults = results;
-        notifyObservers();
-        return;
-    }
-
-    xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    state_.scanResults = results;
-    xSemaphoreGive(stateMutex_);
-
-    notifyObservers();
-}
-
 void ViewModel::notifyObservers()
 {
     if (observersMutex_ == nullptr) {

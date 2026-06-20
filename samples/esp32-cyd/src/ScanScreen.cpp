@@ -2,12 +2,12 @@
 
 void DrawScanScreen(Display& display, const ScanScreenViewState& viewState)
 {
-  const State* app = viewState.app;
-  const ScanScreenUiState* ui = viewState.ui;
+  // const State* app = viewState.app;
+  // const ScanScreenUiState* ui = viewState.ui;
 
-  if (app == nullptr || ui == nullptr) {
-    return;
-  }
+  // if (app == nullptr || ui == nullptr) {
+  //   return;
+  // }
 
   display.tft->fillScreen(TFT_WHITE);
   display.tft->setTextColor(TFT_BLACK, TFT_WHITE);
@@ -18,13 +18,13 @@ void DrawScanScreen(Display& display, const ScanScreenViewState& viewState)
   // display.tft->drawString("Devices: " + String(app->scanResults.size()), 7, 16, 2);
   // display.tft->drawString("Offset: " + String(ui->listOffset), 7, 32, 2);
 
-  int16_t size = app->scanResults.size();
-  for (int i = ui->listOffset; i < size; ++i) {
-    const int16_t y = 64 + (i - ui->listOffset) * 16;
+  int16_t size = viewState.scanResults.size();
+  for (int i = viewState.listOffset; i < size; ++i) {
+    const int16_t y = 48 + (i - viewState.listOffset) * 16;
     if (y > 270) {
       break;
     }
-    const BleScanner::ScanResult& result = app->scanResults[i];
+    const BleScanner::ScanResult& result = viewState.scanResults[i];
 
     char addressSrt[19];
     snprintf(addressSrt, 

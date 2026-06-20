@@ -5,10 +5,9 @@
 
 #include <vector>
 
-#include "BleScanner.h"
 #include "State.h"
 
-class ViewModel : public BleScanner::Listener {
+class ViewModel {
 public:
     class Observer {
     public:
@@ -26,8 +25,6 @@ public:
     State getStateCopy();
     bool selectDevice(int deviceIndex);
     void setCurrentScreen(Screen screen);
-
-    void onDevicesScanned(const std::vector<BleScanner::ScanResult>& results) override;
 
 private:
     void notifyObservers();

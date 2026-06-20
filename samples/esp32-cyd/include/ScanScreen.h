@@ -4,30 +4,40 @@
 #include "State.h"
 #include "ViewModel.h"
 #include "TouchController.h"
-
-struct ScanScreenUiState {
-  int listOffset = 0;
-  int selectedIndex = 0;
-};
+#include "usecases/BleUseCases.h"
+#include "BleScanner.h"
 
 struct ScanScreenViewState {
-  const State* app;
-  const ScanScreenUiState* ui;
+  std::vector<BleScanner::ScanResult> scanResults;
+  uint16_t listOffset = 0;
 };
 
-class ScanScreenViewModel {
+class ScanScreenViewModel : public BleScanner::Listener {
+private:
+    StartScanUseCase &startScanUseCase;
+    StopScanUseCase &stopScanUseCase;
 public:
-    explicit ScanScreenViewModel(ViewModel& viewModel);
+    explicit ScanScreenViewModel(
+      ViewModel& viewModel, 
+      StartScanUseCase& startScanUseCase, 
+      StopScanUseCase& stopScanUseCase
+    );
 
-    const ScanScreenUiState& getUiState() const;
+    ScanScreenViewState getStateCopy() const;
 
     void scrollDown();
     void scrollUp();
     void onDeviceSelected();
+    void onDevicesScanned(const std::vector<BleScanner::ScanResult>& results) override;
+    void setObserver(ViewModel::Observer* observer);
+    void begin();
+    void end();
 
 private:
     ViewModel& viewModel_;
-    ScanScreenUiState uiState_{};
+    ScanScreenViewState uiState_{};
+    SemaphoreHandle_t stateMutex_ = nullptr;
+    ViewModel::Observer* observer_ = nullptr;
 };
 
 class ScanScreenTouchEventHandler : public TouchController::Listener {

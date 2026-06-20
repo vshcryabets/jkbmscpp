@@ -42,7 +42,13 @@ XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 BleScanner bleScanner;
 ViewModel viewModel;
 UiStateObserver uiStateObserver;
-ScanScreenViewModel scanScreenViewModel(viewModel);
+StartScanUseCaseImpl startScanUseCase(bleScanner);
+StopScanUseCaseImpl stopScanUseCase(bleScanner);
+ScanScreenViewModel scanScreenViewModel(
+  viewModel,
+  startScanUseCase,
+  stopScanUseCase
+);
 ScanScreenTouchEventHandler touchEventHandler(scanScreenViewModel);
 TouchController touchController(&touchEventHandler, {
   .clickMoveThresholdPx = 120,
@@ -65,7 +71,9 @@ void setup()
 
   viewModel.addObserver(&uiStateObserver);
   bleScanner.init();
-  bleScanner.startScan(3, 10, &viewModel);
+
+  scanScreenViewModel.setObserver(&uiStateObserver);
+  scanScreenViewModel.begin();
 }
 
 void loop()
@@ -82,8 +90,6 @@ void loop()
   shouldRender = shouldRender || touchEventHandler.consumeUiUpdateFlag();
 
   if (shouldRender) {
-    const State appState = viewModel.getStateCopy();
-    const ScanScreenViewState viewState { &appState, &scanScreenViewModel.getUiState() };
-    DrawScanScreen(display, viewState);
+    DrawScanScreen(display, scanScreenViewModel.getStateCopy());
   }
 }
