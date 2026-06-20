@@ -23,6 +23,9 @@ void ScanScreenViewModel::scrollDown()
 {
     xSemaphoreTake(stateMutex_, portMAX_DELAY);
     uiState_.listOffset += 1;
+    if (uiState_.listOffset >= uiState_.items.size()) {
+        uiState_.listOffset = uiState_.items.size() - 1;
+    }
     xSemaphoreGive(stateMutex_);
     if (observer_ != nullptr) {
         observer_->onStateChanged();
@@ -43,21 +46,42 @@ void ScanScreenViewModel::scrollUp()
 
 void ScanScreenViewModel::onDeviceSelected()
 {
-    // const State appState = viewModel_.getStateCopy();
-    // normalizeUiState(appState);
 
-    // if (appState.scanResults.empty()) {
-    //     return;
-    // }
-
-    // viewModel_.selectDevice(uiState_.selectedIndex);
 }
 
 void ScanScreenViewModel::onDevicesScanned(
     const std::vector<BleScanner::ScanResult>& results
 ) {
+
     xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    uiState_.scanResults = results;
+    uiState_.items.clear();
+    auto sortedResults = results;
+    std::sort(sortedResults.begin(), sortedResults.end(),
+        [](const BleScanner::ScanResult& a, const BleScanner::ScanResult& b) {
+            return a.rssi > b.rssi;
+        });
+    char addressSrt[19];
+    for (auto& result : sortedResults) {
+        UiLabel label;
+        snprintf(addressSrt, 
+            sizeof(addressSrt), 
+            "%02x:%02x:%02x:%02x:%02x:%02x", 
+            result.address[0], 
+            result.address[1], 
+            result.address[2], 
+            result.address[3], 
+            result.address[4], 
+            result.address[5]
+        );
+        if (result.name[0] == '\0') {
+            label.title = String("Unknown");
+        } else {
+            label.title = String(result.name);
+        }
+        label.title = label.title + " (" + String(result.rssi) + " dBm)";
+        label.subtitle = String(addressSrt);
+        uiState_.items.push_back(label);
+    }
     xSemaphoreGive(stateMutex_);
     if (observer_ != nullptr) {
         observer_->onStateChanged();
