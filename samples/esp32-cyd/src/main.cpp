@@ -46,7 +46,6 @@ UiStateObserver uiStateObserver;
 StartScanUseCaseImpl startScanUseCase(bleScanner);
 StopScanUseCaseImpl stopScanUseCase(bleScanner);
 ScanScreenViewModel scanScreenViewModel(
-  viewModel,
   startScanUseCase,
   stopScanUseCase
 );

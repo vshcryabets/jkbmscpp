@@ -4,50 +4,49 @@
 #include <algorithm>
 
 ScanScreenViewModel::ScanScreenViewModel(
-    ViewModel &viewModel,
     StartScanUseCase &startScanUseCase,
     StopScanUseCase &stopScanUseCase)
-    : viewModel_(viewModel),
-      startScanUseCase(startScanUseCase),
+    : startScanUseCase(startScanUseCase),
       stopScanUseCase(stopScanUseCase)
 {
-    stateMutex_ = xSemaphoreCreateMutex();
+    stateMutex = xSemaphoreCreateMutex();
+    uiState.itemProvider = this;
 }
 
 ScanScreenViewState ScanScreenViewModel::getStateCopy() const
 {
-    xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    ScanScreenViewState copy = uiState_;
-    xSemaphoreGive(stateMutex_);
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    ScanScreenViewState copy = uiState;
+    xSemaphoreGive(stateMutex);
     return copy;
 }
 
 void ScanScreenViewModel::scrollDown()
 {
-    xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    uiState_.listOffset += 1;
-    if (uiState_.listOffset >= uiState_.items.size()) {
-        if (!uiState_.items.empty()) {
-            uiState_.listOffset = uiState_.items.size() - 1;
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    uiState.listOffset += 1;
+    if (uiState.listOffset >= uiState.itemCount) {
+        if (uiState.itemCount > 0) {
+            uiState.listOffset = uiState.itemCount - 1;
         } else {
-            uiState_.listOffset = 0;
+            uiState.listOffset = 0;
         }
     }
-    xSemaphoreGive(stateMutex_);
-    if (observer_ != nullptr) {
-        observer_->onStateChanged();
+    xSemaphoreGive(stateMutex);
+    if (observer != nullptr) {
+        observer->onStateChanged();
     }
 }
 
 void ScanScreenViewModel::scrollUp()
 {
-    xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    if (uiState_.listOffset > 0) {
-        uiState_.listOffset -= 1;
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    if (uiState.listOffset > 0) {
+        uiState.listOffset -= 1;
     }
-    xSemaphoreGive(stateMutex_);
-    if (observer_ != nullptr) {
-        observer_->onStateChanged();
+    xSemaphoreGive(stateMutex);
+    if (observer != nullptr) {
+        observer->onStateChanged();
     }
 }
 
@@ -59,52 +58,22 @@ void ScanScreenViewModel::onDeviceSelected()
 void ScanScreenViewModel::onDevicesScanned(
     const std::vector<BleScanner::ScanResult>& results
 ) {
-
-    xSemaphoreTake(stateMutex_, portMAX_DELAY);
-    uiState_.items.clear();
-    std::vector<size_t> idx(results.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(), [&](size_t a, size_t b) {
-        return results[a].rssi > results[b].rssi;
-    });
-    for (size_t i : idx) {
-        const auto& result = results[i];
-        UiLabel label;
-        snprintf(label.subtitle, 
-            sizeof(label.subtitle), 
-            "%02x:%02x:%02x:%02x:%02x:%02x", 
-            result.address[0], 
-            result.address[1], 
-            result.address[2], 
-            result.address[3], 
-            result.address[4], 
-            result.address[5]
-        );
-        const size_t titleSize = sizeof(label.title);
-        if (result.name[0] == '\0') {
-            strncpy(label.title, "Unknown", titleSize - 1);
-            label.title[titleSize - 1] = '\0';
-        } else {
-            strncpy(label.title, result.name, titleSize - 1);
-            label.title[titleSize - 1] = '\0';
-        }
-        snprintf(
-            label.title + strlen(label.title), 
-            titleSize - strlen(label.title), 
-            " (%d dBm)", result.rssi
-        );
-
-        uiState_.items.push_back(label);
-    }
-    xSemaphoreGive(stateMutex_);
-    if (observer_ != nullptr) {
-        observer_->onStateChanged();
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    this->items = results;
+    std::sort(
+        this->items.begin(),
+        this->items.end(), [](const BleScanner::ScanResult &a, const BleScanner::ScanResult &b)
+        { return a.rssi > b.rssi; });
+    uiState.itemCount = static_cast<uint16_t>(this->items.size());
+    xSemaphoreGive(stateMutex);
+    if (observer != nullptr) {
+        observer->onStateChanged();
     }
 } 
 
 void ScanScreenViewModel::setObserver(ViewModel::Observer* observer)
 {
-    observer_ = observer;
+    this->observer = observer;
 }
 
 void ScanScreenViewModel::begin()
@@ -115,4 +84,34 @@ void ScanScreenViewModel::begin()
 void ScanScreenViewModel::end()
 {
     stopScanUseCase.execute();
+}
+
+void ScanScreenViewModel::getItem(int index, UiLabel &out) const
+{
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    auto item = items.at(index);
+    xSemaphoreGive(stateMutex);
+    snprintf(out.subtitle, 
+        sizeof(out.subtitle), 
+        "%02x:%02x:%02x:%02x:%02x:%02x", 
+        item.address[0], 
+        item.address[1], 
+        item.address[2], 
+        item.address[3], 
+        item.address[4], 
+        item.address[5]
+    );
+    const size_t titleSize = sizeof(out.title);
+    if (item.name[0] == '\0') {
+        strncpy(out.title, "Unknown", titleSize - 1);
+        out.title[titleSize - 1] = '\0';
+    } else {
+        strncpy(out.title, item.name, titleSize - 1);
+        out.title[titleSize - 1] = '\0';
+    }
+    snprintf(
+        out.title + strlen(out.title), 
+        titleSize - strlen(out.title), 
+        " (%d dBm2)", item.rssi
+    );
 }

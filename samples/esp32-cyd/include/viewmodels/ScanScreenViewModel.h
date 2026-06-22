@@ -11,21 +11,31 @@ struct UiLabel
   char subtitle[24];
 };
 
-struct ScanScreenViewState
+class ItempProvider
 {
-  std::vector<UiLabel> items;
-  uint16_t listOffset = 0;
+public:
+  virtual void getItem(int index, UiLabel &out) const = 0;
 };
 
-class ScanScreenViewModel : public BleScanner::Listener
+struct ScanScreenViewState
+{
+  uint16_t itemCount = 0;
+  uint16_t listOffset = 0;
+  const ItempProvider *itemProvider = nullptr;
+};
+
+class ScanScreenViewModel : public BleScanner::Listener, public ItempProvider
 {
 private:
   StartScanUseCase &startScanUseCase;
   StopScanUseCase &stopScanUseCase;
+  std::vector<BleScanner::ScanResult> items;
+  ScanScreenViewState uiState{};
+  SemaphoreHandle_t stateMutex = nullptr;
+  ViewModel::Observer *observer = nullptr;
 
 public:
   explicit ScanScreenViewModel(
-      ViewModel &viewModel,
       StartScanUseCase &startScanUseCase,
       StopScanUseCase &stopScanUseCase);
 
@@ -39,9 +49,5 @@ public:
   void begin();
   void end();
 
-private:
-  ViewModel &viewModel_;
-  ScanScreenViewState uiState_{};
-  SemaphoreHandle_t stateMutex_ = nullptr;
-  ViewModel::Observer *observer_ = nullptr;
+  void getItem(int index, UiLabel &out) const override;
 };
