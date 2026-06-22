@@ -1,4 +1,4 @@
-#include "ScanScreen.h"
+#include "screens/ScanScreen.h"
 
 void DrawScanScreen(Display& display, const ScanScreenViewState& viewState)
 {
@@ -36,8 +36,6 @@ void ScanScreenTouchEventHandler::onEvent(TouchController::EventType eventType, 
     case TouchController::EventType::Touch:
       break;
     case TouchController::EventType::Click:
-      Serial.print("click ");
-      Serial.println(y);
       if (y < 650) {
         viewModel.scrollUp();
         hasUiUpdate = true;

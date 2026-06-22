@@ -1,4 +1,4 @@
-#include "ScanScreen.h"
+#include "viewmodels/ScanScreenViewModel.h"
 
 #include <numeric>
 #include <algorithm>

@@ -1,4 +1,4 @@
-#include "ViewModel.h"
+#include "viewmodels/ViewModel.h"
 
 ViewModel::ViewModel()
 {
@@ -66,7 +66,7 @@ State ViewModel::getStateCopy()
 
 bool ViewModel::selectDevice(int deviceIndex)
 {
-
+    return false;
 }
 
 void ViewModel::setCurrentScreen(Screen screen)

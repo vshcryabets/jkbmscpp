@@ -2,10 +2,11 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
-#include "ScanScreen.h"
+#include "screens/ScanScreen.h"
 #include "TouchController.h"
 #include "BleScanner.h"
-#include "ViewModel.h"
+#include "viewmodels/ViewModel.h"
+#include "viewmodels/ScanScreenViewModel.h"
 
 TFT_eSPI tft = TFT_eSPI();
 Display display(&tft);
