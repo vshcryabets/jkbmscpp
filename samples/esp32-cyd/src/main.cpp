@@ -40,20 +40,57 @@ private:
 SPIClass mySpi = SPIClass(VSPI);
 XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
-BleScanner bleScanner;
-ViewModel viewModel;
-UiStateObserver uiStateObserver;
-StartScanUseCaseImpl startScanUseCase(bleScanner);
-StopScanUseCaseImpl stopScanUseCase(bleScanner);
-ScanScreenViewModel scanScreenViewModel(
-  startScanUseCase,
-  stopScanUseCase
-);
-ScanScreenTouchEventHandler touchEventHandler(scanScreenViewModel);
-TouchController touchController(&touchEventHandler, {
-  .clickMoveThresholdPx = 120,
-  .maxClickDurationMs = 500,
-});
+class MainLoop {
+private:
+  UiStateObserver uiStateObserver;
+  BleScanner bleScanner;
+  StartScanUseCaseImpl startScanUseCase;
+  StopScanUseCaseImpl stopScanUseCase;
+  ScanScreenViewModel scanScreenViewModel;
+  ScanScreenTouchEventHandler touchEventHandler;
+  TouchController touchController;
+public:
+  MainLoop(): 
+  startScanUseCase(bleScanner),
+  stopScanUseCase(bleScanner),
+  scanScreenViewModel(
+    startScanUseCase,
+    stopScanUseCase
+  ),
+  touchEventHandler(scanScreenViewModel),
+  touchController(&touchEventHandler, {
+    .clickMoveThresholdPx = 120,
+    .maxClickDurationMs = 500,
+  })
+  {
+
+  };
+  void setup() {
+    bleScanner.init();
+    scanScreenViewModel.setObserver(&uiStateObserver);
+    scanScreenViewModel.begin();
+  }
+
+  void loop() {
+    bool shouldRender = uiStateObserver.consumeUpdateFlag();
+
+    if (ts.tirqTouched() && ts.touched()) {
+      TS_Point p = ts.getPoint();
+      touchController.updateTouch(static_cast<int16_t>(p.x), static_cast<int16_t>(p.y));
+    } else {
+      touchController.updateNoTouch();
+    }
+
+    shouldRender = shouldRender || touchEventHandler.consumeUiUpdateFlag();
+
+    if (shouldRender) {
+      DrawScanScreen(display, scanScreenViewModel.getStateCopy());
+    }
+  }
+};
+
+
+MainLoop mainLoop;
 
 void setup()
 {
@@ -63,33 +100,13 @@ void setup()
   ts.begin(mySpi);
   ts.setRotation(0);
 
-  Serial.println("Hello, World!2");
-
   tft.init();
   tft.begin(); 
   tft.setRotation(0);
-
-  viewModel.addObserver(&uiStateObserver);
-  bleScanner.init();
-
-  scanScreenViewModel.setObserver(&uiStateObserver);
-  scanScreenViewModel.begin();
+  mainLoop.setup();
 }
 
 void loop()
 {
-  bool shouldRender = uiStateObserver.consumeUpdateFlag();
-
-  if (ts.tirqTouched() && ts.touched()) {
-    TS_Point p = ts.getPoint();
-    touchController.updateTouch(static_cast<int16_t>(p.x), static_cast<int16_t>(p.y));
-  } else {
-    touchController.updateNoTouch();
-  }
-
-  shouldRender = shouldRender || touchEventHandler.consumeUiUpdateFlag();
-
-  if (shouldRender) {
-    DrawScanScreen(display, scanScreenViewModel.getStateCopy());
-  }
+  mainLoop.loop();
 }
