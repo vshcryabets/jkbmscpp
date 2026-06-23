@@ -23,10 +23,9 @@ public:
     };
 
 public:
-    explicit TouchController(Listener* listener, const Config& config);
+    explicit TouchController(const Config& config);
 
     void setListener(Listener* listener);
-
     void updateTouch(int16_t x, int16_t y);
     void updateNoTouch();
 

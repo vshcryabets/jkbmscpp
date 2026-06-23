@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 
-TouchController::TouchController(Listener* listener, const Config& config)
-    : listener_(listener), 
+TouchController::TouchController(const Config& config)
+    : listener_(nullptr), 
     maxClickDurationMs(config.maxClickDurationMs),
     clickMoveThresholdSqrPx(config.clickMoveThresholdPx * config.clickMoveThresholdPx)
 {

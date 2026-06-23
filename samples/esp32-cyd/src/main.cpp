@@ -41,14 +41,24 @@ SPIClass mySpi = SPIClass(VSPI);
 XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
 class MainLoop {
+public:
+  enum class ScreenType {
+    None,
+    ScanScreen,
+    DetailsScreen,
+  };
 private:
   UiStateObserver uiStateObserver;
   BleScanner bleScanner;
   StartScanUseCaseImpl startScanUseCase;
   StopScanUseCaseImpl stopScanUseCase;
-  ScanScreenViewModel scanScreenViewModel;
-  ScanScreenTouchEventHandler touchEventHandler;
   TouchController touchController;
+
+  Screen *currentScreen = nullptr;
+  ScreenType currentScreenType = ScreenType::None;
+
+  ScanScreenImpl scanScreen;
+  ScanScreenViewModel scanScreenViewModel;
 public:
   MainLoop(): 
   startScanUseCase(bleScanner),
@@ -57,8 +67,8 @@ public:
     startScanUseCase,
     stopScanUseCase
   ),
-  touchEventHandler(scanScreenViewModel),
-  touchController(&touchEventHandler, {
+  scanScreen(display, scanScreenViewModel),
+  touchController({
     .clickMoveThresholdPx = 120,
     .maxClickDurationMs = 500,
   })
@@ -67,8 +77,19 @@ public:
   };
   void setup() {
     bleScanner.init();
+    navigateToScanScreen();
+  }
+
+  void navigateToScanScreen() {
+    if (currentScreen != nullptr) {
+      touchController.setListener(nullptr);
+      currentScreen->end();
+    }
+    currentScreen = &scanScreen;
     scanScreenViewModel.setObserver(&uiStateObserver);
-    scanScreenViewModel.begin();
+    currentScreen->begin();
+    currentScreenType = ScreenType::ScanScreen;
+    touchController.setListener(currentScreen->getTouchHandler());
   }
 
   void loop() {
@@ -81,10 +102,20 @@ public:
       touchController.updateNoTouch();
     }
 
-    shouldRender = shouldRender || touchEventHandler.consumeUiUpdateFlag();
+    shouldRender = shouldRender || currentScreen->getTouchHandler()->consumeUiUpdateFlag();
 
     if (shouldRender) {
-      DrawScanScreen(display, scanScreenViewModel.getStateCopy());
+      currentScreen->draw();
+      // switch (currentScreen) {
+      //   case ScreenType::ScanScreen:
+      //     drawScanScreen.draw(display, scanScreenViewModel.getStateCopy());
+      //     break;
+      //   case ScreenType::DetailsScreen:
+      //     // DrawDetailsScreen(display, detailsScreenViewModel.getStateCopy());
+      //     break;
+      //   default:
+      //     break;
+      // }
     }
   }
 };

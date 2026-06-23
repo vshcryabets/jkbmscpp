@@ -4,8 +4,10 @@
 #include "TouchController.h"
 
 #include "viewmodels/ScanScreenViewModel.h"
+#include "screens/Screen.h"
 
-class ScanScreenTouchEventHandler : public TouchController::Listener
+
+class ScanScreenTouchEventHandler : public InputController
 {
 public:
   explicit ScanScreenTouchEventHandler(ScanScreenViewModel &screenController);
@@ -18,6 +20,19 @@ private:
   bool hasUiUpdate = false;
 };
 
-void DrawScanScreen(
+class ScanScreenImpl: public Screen
+{
+private:
+  ScanScreenTouchEventHandler touchImpl;
+  ScanScreenViewModel &viewModel;
+  Display &display;
+public:
+  ScanScreenImpl(
     Display &display,
-    const ScanScreenViewState &viewState);
+    ScanScreenViewModel &viewModel
+  );
+  void begin() override;
+  void end() override;
+  void draw() override;
+  InputController* getTouchHandler() override;
+};

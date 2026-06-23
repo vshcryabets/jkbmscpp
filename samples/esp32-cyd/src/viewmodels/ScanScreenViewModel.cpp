@@ -6,48 +6,34 @@
 ScanScreenViewModel::ScanScreenViewModel(
     StartScanUseCase &startScanUseCase,
     StopScanUseCase &stopScanUseCase)
-    : startScanUseCase(startScanUseCase),
+    : ViewModelAbstract<ScanScreenState>(),
+      startScanUseCase(startScanUseCase),
       stopScanUseCase(stopScanUseCase)
 {
-    stateMutex = xSemaphoreCreateMutex();
-    uiState.itemProvider = this;
-}
-
-ScanScreenViewState ScanScreenViewModel::getStateCopy() const
-{
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    ScanScreenViewState copy = uiState;
-    xSemaphoreGive(stateMutex);
-    return copy;
+    state.itemProvider = this;
 }
 
 void ScanScreenViewModel::scrollDown()
 {
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    uiState.listOffset += 1;
-    if (uiState.listOffset >= uiState.itemCount) {
-        if (uiState.itemCount > 0) {
-            uiState.listOffset = uiState.itemCount - 1;
-        } else {
-            uiState.listOffset = 0;
+    withStateLock([this](ScanScreenState &state) {
+        state.listOffset += 1;
+        if (state.listOffset >= state.itemCount) {
+            if (state.itemCount > 0) {
+                state.listOffset = state.itemCount - 1;
+            } else {
+                state.listOffset = 0;
+            }
         }
-    }
-    xSemaphoreGive(stateMutex);
-    if (observer != nullptr) {
-        observer->onStateChanged();
-    }
+    });
 }
 
 void ScanScreenViewModel::scrollUp()
 {
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    if (uiState.listOffset > 0) {
-        uiState.listOffset -= 1;
-    }
-    xSemaphoreGive(stateMutex);
-    if (observer != nullptr) {
-        observer->onStateChanged();
-    }
+    withStateLock([this](ScanScreenState &state) {
+        if (state.listOffset > 0) {
+            state.listOffset -= 1;
+        }
+    });
 }
 
 void ScanScreenViewModel::onDeviceSelected()
@@ -58,23 +44,15 @@ void ScanScreenViewModel::onDeviceSelected()
 void ScanScreenViewModel::onDevicesScanned(
     const std::vector<BleScanner::ScanResult>& results
 ) {
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    this->items = results;
-    std::sort(
-        this->items.begin(),
-        this->items.end(), [](const BleScanner::ScanResult &a, const BleScanner::ScanResult &b)
-        { return a.rssi > b.rssi; });
-    uiState.itemCount = static_cast<uint16_t>(this->items.size());
-    xSemaphoreGive(stateMutex);
-    if (observer != nullptr) {
-        observer->onStateChanged();
-    }
+    withStateLock([this, &results](ScanScreenState &state) {
+        this->items = results;
+        std::sort(
+            this->items.begin(),
+            this->items.end(), [](const BleScanner::ScanResult &a, const BleScanner::ScanResult &b)
+            { return a.rssi > b.rssi; });
+        state.itemCount = static_cast<uint16_t>(this->items.size());
+    });
 } 
-
-void ScanScreenViewModel::setObserver(ViewModel::Observer* observer)
-{
-    this->observer = observer;
-}
 
 void ScanScreenViewModel::begin()
 {
@@ -88,9 +66,8 @@ void ScanScreenViewModel::end()
 
 void ScanScreenViewModel::getItem(int index, UiLabel &out) const
 {
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    auto item = items.at(index);
-    xSemaphoreGive(stateMutex);
+    // TODO use mutex protection here
+    BleScanner::ScanResult item = items.at(static_cast<size_t>(index));
     snprintf(out.subtitle, 
         sizeof(out.subtitle), 
         "%02x:%02x:%02x:%02x:%02x:%02x", 

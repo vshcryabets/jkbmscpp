@@ -1,6 +1,7 @@
 #include "screens/ScanScreen.h"
 
-void DrawScanScreen(Display& display, const ScanScreenViewState& viewState)
+
+void DrawScanScreen(Display& display, const ScanScreenState& viewState)
 {
   display.tft->fillScreen(TFT_WHITE);
 
@@ -65,4 +66,29 @@ bool ScanScreenTouchEventHandler::consumeUiUpdateFlag()
   const bool hasUpdate = hasUiUpdate;
   hasUiUpdate = false;
   return hasUpdate;
+}
+
+ScanScreenImpl::ScanScreenImpl(Display &display, ScanScreenViewModel& viewModel)
+    : Screen(), touchImpl(viewModel), viewModel(viewModel), display(display)
+{
+}
+
+void ScanScreenImpl::begin()
+{
+  viewModel.begin();
+}
+
+void ScanScreenImpl::end()
+{
+  viewModel.end();
+}
+
+void ScanScreenImpl::draw()
+{
+  DrawScanScreen(display, viewModel.getStateCopy());
+}
+
+InputController* ScanScreenImpl::getTouchHandler()
+{
+  return &touchImpl;
 }
