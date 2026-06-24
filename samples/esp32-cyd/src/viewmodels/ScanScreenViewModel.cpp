@@ -72,6 +72,11 @@ void ScanScreenViewModel::onDevicesScanned(
 void ScanScreenViewModel::begin(void* args)
 {
     startScanUseCase.execute(3, 5, this);
+    Serial.println("ScanScreenViewModel::begin");
+    withStateLock([this](ScanScreenState &state) {
+        state.listOffset = 0;
+        state.itemCount = 0;
+    });
 }
 
 void ScanScreenViewModel::end()

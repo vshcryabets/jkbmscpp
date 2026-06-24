@@ -55,6 +55,7 @@ void BleScanner::scanTaskEntry(void* parameter)
 
 void BleScanner::scanTaskLoop()
 {
+    Serial.println("BLE task start\n");
     BLEScan* bleScan = BLEDevice::getScan();
     bleScan->setActiveScan(true);
     bleScan->setInterval(100);
@@ -111,6 +112,7 @@ void BleScanner::scanTaskLoop()
         vTaskDelay(pdMS_TO_TICKS(scanPeriodSeconds_ * 1000));
     }
 
+    Serial.println("BLE task stop\n");
     scanHandle_ = nullptr;
     vTaskDelete(nullptr);
 }
