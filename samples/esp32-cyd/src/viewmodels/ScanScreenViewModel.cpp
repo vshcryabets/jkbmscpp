@@ -42,9 +42,16 @@ void ScanScreenViewModel::scrollUp()
 
 void ScanScreenViewModel::onDeviceSelected(uint8_t id)
 {
+    Serial.print("onDeviceSelected ");
+    Serial.println(id);
     withStateLock([this, &id](ScanScreenState &state) {
+        uint16_t realIndex = state.listOffset + id;
+        if (realIndex >= state.itemCount) {
+            return;
+        }
+        Serial.printf("Selected device at index %d\n", realIndex);
         DetailsScreenArgs args;
-        memcpy(args.macAddress, items.at(static_cast<size_t>(id)).address, sizeof(args.macAddress));
+        memcpy(args.macAddress, items.at(static_cast<size_t>(realIndex)).address, sizeof(args.macAddress));
         navigationController.navigateToDetailsScreen(args);
     });
 }

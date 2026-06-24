@@ -45,6 +45,9 @@ void ScanScreenTouchEventHandler::onEvent(TouchController::EventType eventType, 
       } else if (y > 3200) {
         viewModel.scrollDown();
         hasUiUpdate = true;
+      } else {
+        uint16_t pos = (y - 650) / 365;
+        viewModel.onDeviceSelected(pos);
       }
       break;
     case TouchController::EventType::NoTouch:
