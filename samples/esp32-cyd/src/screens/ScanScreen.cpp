@@ -73,9 +73,9 @@ ScanScreenImpl::ScanScreenImpl(Display &display, ScanScreenViewModel& viewModel)
 {
 }
 
-void ScanScreenImpl::begin()
+void ScanScreenImpl::begin(void *args)
 {
-  viewModel.begin();
+  viewModel.begin(args);
 }
 
 void ScanScreenImpl::end()

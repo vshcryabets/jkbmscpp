@@ -3,33 +3,33 @@
 #include "Display.h"
 #include "TouchController.h"
 
-#include "viewmodels/ScanScreenViewModel.h"
+#include "viewmodels/DetailsScreenViewModel.h"
 #include "screens/Screen.h"
 
 
-class ScanScreenTouchEventHandler : public InputController
+class DetailsScreenTouchEventHandler : public InputController
 {
 public:
-  explicit ScanScreenTouchEventHandler(ScanScreenViewModel &screenController);
+  explicit DetailsScreenTouchEventHandler(DetailsScreenViewModel &screenController);
 
   void onEvent(TouchController::EventType eventType, int16_t x, int16_t y) override;
   bool consumeUiUpdateFlag();
 
 private:
-  ScanScreenViewModel &viewModel;
+  DetailsScreenViewModel &viewModel;
   bool hasUiUpdate = false;
 };
 
-class ScanScreenImpl: public Screen
+class DetailsScreenImpl: public Screen
 {
 private:
-  ScanScreenTouchEventHandler touchImpl;
-  ScanScreenViewModel &viewModel;
+  DetailsScreenTouchEventHandler touchImpl;
+  DetailsScreenViewModel &viewModel;
   Display &display;
 public:
-  ScanScreenImpl(
+  DetailsScreenImpl(
     Display &display,
-    ScanScreenViewModel &viewModel
+    DetailsScreenViewModel &viewModel
   );
   void begin(void *args) override;
   void end() override;

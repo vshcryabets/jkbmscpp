@@ -4,6 +4,7 @@
 
 #include "usecases/BleUseCases.h"
 #include "viewmodels/ViewModel.h"
+#include "NavigationController.h"
 
 struct UiLabel
 {
@@ -32,17 +33,19 @@ private:
   StartScanUseCase &startScanUseCase;
   StopScanUseCase &stopScanUseCase;
   std::vector<BleScanner::ScanResult> items;
+  NavigationController &navigationController;
 
 public:
   explicit ScanScreenViewModel(
       StartScanUseCase &startScanUseCase,
-      StopScanUseCase &stopScanUseCase);
+      StopScanUseCase &stopScanUseCase,
+      NavigationController &navigationController);
 
   void scrollDown();
   void scrollUp();
-  void onDeviceSelected();
+  void onDeviceSelected(uint8_t id);
   void onDevicesScanned(const std::vector<BleScanner::ScanResult> &results) override;
-  void begin() override;
+  void begin(void* args) override;
   void end() override;
 
   void getItem(int index, UiLabel &out) const override;

@@ -7,6 +7,9 @@
 #include "BleScanner.h"
 #include "viewmodels/ViewModel.h"
 #include "viewmodels/ScanScreenViewModel.h"
+#include "viewmodels/DetailsScreenViewModel.h"
+
+#include "screens/DetailsScreen.h"
 
 TFT_eSPI tft = TFT_eSPI();
 Display display(&tft);
@@ -42,11 +45,7 @@ XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
 
 class MainLoop {
 public:
-  enum class ScreenType {
-    None,
-    ScanScreen,
-    DetailsScreen,
-  };
+
 private:
   UiStateObserver uiStateObserver;
   BleScanner bleScanner;
@@ -59,22 +58,32 @@ private:
 
   ScanScreenImpl scanScreen;
   ScanScreenViewModel scanScreenViewModel;
+
+  DetailsScreenImpl detailsScreen;
+  DetailsScreenViewModel detailsScreenViewModel;
+  FreeRTOSNavigationController navigationController;
+
+  NavigationEvent navigationEvent;
 public:
   MainLoop(): 
   startScanUseCase(bleScanner),
   stopScanUseCase(bleScanner),
   scanScreenViewModel(
     startScanUseCase,
-    stopScanUseCase
+    stopScanUseCase,
+    navigationController
   ),
   scanScreen(display, scanScreenViewModel),
   touchController({
     .clickMoveThresholdPx = 120,
     .maxClickDurationMs = 500,
-  })
+  }),
+  detailsScreenViewModel(navigationController),
+  detailsScreen(display, detailsScreenViewModel)
   {
 
   };
+
   void setup() {
     bleScanner.init();
     navigateToScanScreen();
@@ -87,8 +96,25 @@ public:
     }
     currentScreen = &scanScreen;
     scanScreenViewModel.setObserver(&uiStateObserver);
-    currentScreen->begin();
+    currentScreen->begin(nullptr);
     currentScreenType = ScreenType::ScanScreen;
+    touchController.setListener(currentScreen->getTouchHandler());
+  }
+
+  void navigateToDetailsScreen(DetailsScreenArgs args) {
+    if (currentScreen != nullptr) {
+      touchController.setListener(nullptr);
+      currentScreen->end();
+    }
+    currentScreen = &detailsScreen;
+    detailsScreenViewModel.setObserver(&uiStateObserver);
+    detailsScreenViewModel.withStateLock([&args](DetailsScreenState &state) {
+      snprintf(state.title, sizeof(state.title), "MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+               args.macAddress[0], args.macAddress[1], args.macAddress[2],
+               args.macAddress[3], args.macAddress[4], args.macAddress[5]);
+    });
+    currentScreen->begin(&args);
+    currentScreenType = ScreenType::DetailsScreen;
     touchController.setListener(currentScreen->getTouchHandler());
   }
 
@@ -106,16 +132,19 @@ public:
 
     if (shouldRender) {
       currentScreen->draw();
-      // switch (currentScreen) {
-      //   case ScreenType::ScanScreen:
-      //     drawScanScreen.draw(display, scanScreenViewModel.getStateCopy());
-      //     break;
-      //   case ScreenType::DetailsScreen:
-      //     // DrawDetailsScreen(display, detailsScreenViewModel.getStateCopy());
-      //     break;
-      //   default:
-      //     break;
-      // }
+    }
+
+    if (navigationController.readEvent(navigationEvent, 0)) {
+      switch (navigationEvent.targetScreen) {
+        case ScreenType::ScanScreen:
+          navigateToScanScreen();
+          break;
+        case ScreenType::DetailsScreen:
+          navigateToDetailsScreen(navigationEvent.args);
+          break;
+        default:
+          break;
+      }
     }
   }
 };

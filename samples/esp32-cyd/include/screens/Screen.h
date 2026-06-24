@@ -12,7 +12,7 @@ public:
 
 class Screen{
 public:
-  virtual void begin() = 0;
+  virtual void begin(void *args) = 0;
   virtual void end() = 0;
   virtual void draw() = 0;
   virtual InputController* getTouchHandler() = 0;

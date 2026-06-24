@@ -14,7 +14,7 @@ public:
 public:
     ViewModel();
     virtual ~ViewModel();
-    virtual void begin() = 0;
+    virtual void begin(void* args) = 0;
     virtual void end() = 0;
 };
 

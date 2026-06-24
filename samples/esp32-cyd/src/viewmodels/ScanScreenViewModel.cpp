@@ -3,12 +3,16 @@
 #include <numeric>
 #include <algorithm>
 
+#include "screens/UiMappers.h"
+
 ScanScreenViewModel::ScanScreenViewModel(
     StartScanUseCase &startScanUseCase,
-    StopScanUseCase &stopScanUseCase)
+    StopScanUseCase &stopScanUseCase,
+    NavigationController &navigationController)
     : ViewModelAbstract<ScanScreenState>(),
       startScanUseCase(startScanUseCase),
-      stopScanUseCase(stopScanUseCase)
+      stopScanUseCase(stopScanUseCase),
+      navigationController(navigationController)
 {
     state.itemProvider = this;
 }
@@ -36,9 +40,13 @@ void ScanScreenViewModel::scrollUp()
     });
 }
 
-void ScanScreenViewModel::onDeviceSelected()
+void ScanScreenViewModel::onDeviceSelected(uint8_t id)
 {
-
+    withStateLock([this, &id](ScanScreenState &state) {
+        DetailsScreenArgs args;
+        memcpy(args.macAddress, items.at(static_cast<size_t>(id)).address, sizeof(args.macAddress));
+        navigationController.navigateToDetailsScreen(args);
+    });
 }
 
 void ScanScreenViewModel::onDevicesScanned(
@@ -54,7 +62,7 @@ void ScanScreenViewModel::onDevicesScanned(
     });
 } 
 
-void ScanScreenViewModel::begin()
+void ScanScreenViewModel::begin(void* args)
 {
     startScanUseCase.execute(3, 5, this);
 }
@@ -68,16 +76,7 @@ void ScanScreenViewModel::getItem(int index, UiLabel &out) const
 {
     // TODO use mutex protection here
     BleScanner::ScanResult item = items.at(static_cast<size_t>(index));
-    snprintf(out.subtitle, 
-        sizeof(out.subtitle), 
-        "%02x:%02x:%02x:%02x:%02x:%02x", 
-        item.address[0], 
-        item.address[1], 
-        item.address[2], 
-        item.address[3], 
-        item.address[4], 
-        item.address[5]
-    );
+    macAddressToString(item.address, out.subtitle, sizeof(out.subtitle));
     const size_t titleSize = sizeof(out.title);
     if (item.name[0] == '\0') {
         strncpy(out.title, "Unknown", titleSize - 1);
