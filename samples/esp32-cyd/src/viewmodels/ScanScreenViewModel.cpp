@@ -2,6 +2,7 @@
 
 #include <numeric>
 #include <algorithm>
+#include <Arduino.h>
 
 #include "screens/UiMappers.h"
 

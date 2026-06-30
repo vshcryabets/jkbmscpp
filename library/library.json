@@ -1,0 +1,7 @@
+{
+  "name": "jkbmscpp",
+  "version": "1.0.0",
+  "build": {
+    "extraScript": "filter_src.py"
+  }
+}

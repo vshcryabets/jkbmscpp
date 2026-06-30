@@ -1,29 +1,19 @@
 #pragma once
+
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-#include <vector>
-#include <cstdint>
 #include <BLEScan.h>
 
-class BleScanner {
-public:
-    struct ScanResult {
-        uint8_t address[6];
-        char name[32];
-        int8_t rssi;
-    };
-    class Listener {
-    public:
-        virtual ~Listener() = default;
-        virtual void onDevicesScanned(const std::vector<ScanResult>& results) = 0;
-    };
-public:
-    BleScanner();
-    void init();
-    void startScan(uint8_t scanTimeSeconds, uint8_t scanPeriodSeconds, Listener* listener);
-    void stopScan();
+#include "BleScanner.h"
 
+class BleScannerBLEArduinoImpl: public BleScanner {
+
+public:
+    BleScannerBLEArduinoImpl();
+    void init() override;
+    void startScan(uint8_t scanTimeSeconds, uint8_t scanPeriodSeconds, Listener* listener) override;
+    void stopScan() override;
 private:
     static void scanTaskEntry(void* parameter);
     void scanTaskLoop();

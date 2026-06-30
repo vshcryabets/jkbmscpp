@@ -4,7 +4,8 @@
 #include <XPT2046_Touchscreen.h>
 #include "screens/ScanScreen.h"
 #include "TouchController.h"
-#include "BleScanner.h"
+#include "ble/BleScanner.h"
+#include "ble/BleScannerBLEArduinoImpl.h"
 #include "viewmodels/ViewModel.h"
 #include "viewmodels/ScanScreenViewModel.h"
 #include "viewmodels/DetailsScreenViewModel.h"
@@ -48,7 +49,7 @@ public:
 
 private:
   UiStateObserver uiStateObserver;
-  BleScanner bleScanner;
+  BleScannerBLEArduinoImpl bleScanner;
   StartScanUseCaseImpl startScanUseCase;
   StopScanUseCaseImpl stopScanUseCase;
   TouchController touchController;

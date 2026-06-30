@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BleScanner.h"
+#include "ble/BleScanner.h"
 
 class StartScanUseCase { 
 public:

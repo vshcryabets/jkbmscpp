@@ -1,4 +1,4 @@
-#include "BleScanner.h"
+#include "ble/BleScannerBLEArduinoImpl.h"
 
 #include <Arduino.h>
 #include <BLEDevice.h>
@@ -8,11 +8,11 @@
 
 constexpr uint32_t BLE_SCAN_INTERVAL_MS = 5000;
 
-BleScanner::BleScanner()
+BleScannerBLEArduinoImpl::BleScannerBLEArduinoImpl()
 {
     runningMutex_ = xSemaphoreCreateMutex();
     xTaskCreate(
-        BleScanner::scanTaskEntry,
+        BleScannerBLEArduinoImpl::scanTaskEntry,
         "BleScanTask",
         6144,
         this,
@@ -20,13 +20,13 @@ BleScanner::BleScanner()
         &scanHandle_);
 }
 
-void BleScanner::init()
+void BleScannerBLEArduinoImpl::init()
 {
     BLEDevice::init("");
     Serial.println("BLE scanner initialized");
 }
 
-void BleScanner::startScan(
+void BleScannerBLEArduinoImpl::startScan(
     uint8_t scanTimeSeconds,
     uint8_t scanPeriodSeconds,
     Listener* listener
@@ -40,18 +40,18 @@ void BleScanner::startScan(
     xTaskNotify(scanHandle_, CMD_START_SCAN, eSetValueWithOverwrite);
 }
 
-void BleScanner::stopScan()
+void BleScannerBLEArduinoImpl::stopScan()
 {
     xTaskNotify(scanHandle_, CMD_STOP_SCAN, eSetValueWithOverwrite);
 }
 
-void BleScanner::scanTaskEntry(void* parameter)
+void BleScannerBLEArduinoImpl::scanTaskEntry(void* parameter)
 {
-    auto* scanner = static_cast<BleScanner*>(parameter);
+    auto* scanner = static_cast<BleScannerBLEArduinoImpl*>(parameter);
     scanner->scanTaskLoop();
 }
 
-void BleScanner::doScanStep(BLEScan* bleScan, uint8_t scanTimeSeconds)
+void BleScannerBLEArduinoImpl::doScanStep(BLEScan* bleScan, uint8_t scanTimeSeconds)
 {
     Serial.println("Starting BLE scan...");
     BLEScanResults scanResults = bleScan->start(scanTimeSeconds_, false);
@@ -101,7 +101,7 @@ void BleScanner::doScanStep(BLEScan* bleScan, uint8_t scanTimeSeconds)
     Serial.println("BLE scan complete\n");
 }
 
-void BleScanner::scanTaskLoop()
+void BleScannerBLEArduinoImpl::scanTaskLoop()
 {
     uint32_t notificationValue;
     while (true) {
@@ -138,7 +138,7 @@ void BleScanner::scanTaskLoop()
     vTaskDelete(nullptr);
 }
 
-bool BleScanner::isRunning()
+bool BleScannerBLEArduinoImpl::isRunning()
 {
     if (runningMutex_ == nullptr) {
         return running_;
@@ -150,7 +150,7 @@ bool BleScanner::isRunning()
     return running;
 }
 
-void BleScanner::setRunning(bool running)
+void BleScannerBLEArduinoImpl::setRunning(bool running)
 {
     if (runningMutex_ == nullptr) {
         running_ = running;
