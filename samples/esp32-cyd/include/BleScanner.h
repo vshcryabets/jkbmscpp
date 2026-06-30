@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <vector>
 #include <cstdint>
+#include <BLEScan.h>
 
 class BleScanner {
 public:
@@ -28,8 +29,11 @@ private:
     void scanTaskLoop();
     bool isRunning();
     void setRunning(bool running);
+    void doScanStep(BLEScan* bleScan, uint8_t scanTimeSeconds);
 
 private:
+    static constexpr uint32_t CMD_START_SCAN = 1;
+    static constexpr uint32_t CMD_STOP_SCAN = 2;
     TaskHandle_t scanHandle_ = nullptr;
     uint8_t scanTimeSeconds_ = 3;
     uint8_t scanPeriodSeconds_ = 5;
