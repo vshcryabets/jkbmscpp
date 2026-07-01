@@ -64,7 +64,18 @@ namespace JkBmsCpp {
         size_t length;
         JkBmsString() : data(nullptr), length(0) {}
         JkBmsString(const char* str, size_t len) : data(str), length(len) {}
-        JkBmsString(const char* str) : data(str), length(strlen(str)) {}
+        JkBmsString(const char* str) : data(str), length(str ? strlen(str) : 0) {}
+
+        bool operator==(const JkBmsString& rhs) const {
+            return length == rhs.length && (length == 0 || memcmp(data, rhs.data, length) == 0);
+        }
+        bool operator==(const char* rhs) const {
+            if (rhs == nullptr) {
+                return data == nullptr && length == 0;
+            }
+            const size_t rhs_len = strlen(rhs);
+            return length == rhs_len && (length == 0 || memcmp(data, rhs, length) == 0);
+        }
     };
 #endif
 
