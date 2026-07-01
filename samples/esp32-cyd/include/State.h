@@ -1,0 +1,15 @@
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+#include "BleScanner.h"
+
+enum class Screen: uint8_t {
+    Scanner,
+    Details,
+};
+
+struct State {
+    Screen currentScreen { Screen::Scanner };
+};
