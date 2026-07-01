@@ -12,7 +12,7 @@ JkBmsSourceSimpleBleImpl::~JkBmsSourceSimpleBleImpl() {
     disconnect();
 }
 
-JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::sendCommand(
+JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::sendCommand(
     const JkBmsCpp::JkBmsDataBuffer& command,
     const JkBmsCpp::JkBmsString& service_uuid,
     const JkBmsCpp::JkBmsString& char_uuid) {
@@ -20,24 +20,24 @@ JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::sendCommand(
     std::cout << "Sending command (" << command.size() << " bytes):" << std::endl;
     JkBmsCpp::dumpDataToLog(command.data(), command.size());
     peripheral.write_request(service_uuid, char_uuid, command_bytes);
-    return JkBmsCpp::JkBmsSourceError::SUCCESS;
+    return JkBmsCpp::SourceError::SUCCESS;
 }
 
-JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::connect() {
+JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::connect() {
     peripheral.connect();
-    return JkBmsCpp::JkBmsSourceError::SUCCESS;
+    return JkBmsCpp::SourceError::SUCCESS;
 }
 
-JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::disconnect() {
+JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::disconnect() {
     peripheral.disconnect();
-    return JkBmsCpp::JkBmsSourceError::SUCCESS;
+    return JkBmsCpp::SourceError::SUCCESS;
 }
 
 size_t JkBmsSourceSimpleBleImpl::getMtu() {
     return peripheral.mtu();
 }
 
-JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::subscribe(
+JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::subscribe(
     const JkBmsCpp::JkBmsString& service_uuid,
     const JkBmsCpp::JkBmsString& char_uuid,
     void* context,
@@ -52,13 +52,13 @@ JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::subscribe(
                     static_cast<uint16_t>(bytes.size())
                 ));
     });
-    return JkBmsCpp::JkBmsSourceError::SUCCESS;
+    return JkBmsCpp::SourceError::SUCCESS;
 }
 
-JkBmsCpp::JkBmsSourceError JkBmsSourceSimpleBleImpl::unsubscribe(
+JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::unsubscribe(
     const JkBmsCpp::JkBmsString& service_uuid,
     const JkBmsCpp::JkBmsString& char_uuid
 ) {
     peripheral.unsubscribe(service_uuid, char_uuid);
-    return JkBmsCpp::JkBmsSourceError::SUCCESS;
+    return JkBmsCpp::SourceError::SUCCESS;
 }
