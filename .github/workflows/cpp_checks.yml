@@ -23,7 +23,6 @@ jobs:
       with:
         submodules: 'recursive'
 
-    - name: Set up Python 3.12
     - name: Install dependencies
       run: |
         sudo apt-get -y update
