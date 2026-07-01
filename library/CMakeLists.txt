@@ -14,7 +14,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 include(Catch)
 
-
 option(USE_STD_STRING "Use std::string instead of custom JkBmsString" ON)
 
 add_library(libjkbmscpp)
@@ -39,6 +38,7 @@ add_executable(library_test
     )
 target_include_directories(library_test PRIVATE ./include/)
 target_link_libraries(library_test PRIVATE Catch2::Catch2WithMain libjkbmscpp)
+
 catch_discover_tests(library_test 
     PROPERTIES 
     TIMEOUT 10)

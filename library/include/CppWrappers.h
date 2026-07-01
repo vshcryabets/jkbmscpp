@@ -6,6 +6,8 @@
 
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
+#else
+#include <string.h>
 #endif
 
 namespace JkBmsCpp {
@@ -57,7 +59,24 @@ namespace JkBmsCpp {
 #ifdef JKBMSCPP_USE_STD_STRING    
     typedef std::string JkBmsString;
 #else
-    typedef const char* JkBmsString;
+    struct JkBmsString {
+        const char* data;
+        size_t length;
+        JkBmsString() : data(nullptr), length(0) {}
+        JkBmsString(const char* str, size_t len) : data(str), length(len) {}
+        JkBmsString(const char* str) : data(str), length(str ? strlen(str) : 0) {}
+
+        bool operator==(const JkBmsString& rhs) const {
+            return length == rhs.length && (length == 0 || memcmp(data, rhs.data, length) == 0);
+        }
+        bool operator==(const char* rhs) const {
+            if (rhs == nullptr) {
+                return data == nullptr && length == 0;
+            }
+            const size_t rhs_len = strlen(rhs);
+            return length == rhs_len && (length == 0 || memcmp(data, rhs, length) == 0);
+        }
+    };
 #endif
 
     typedef std::vector<uint8_t> JkBmsByteBuffer;

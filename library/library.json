@@ -1,0 +1,9 @@
+{
+  "name": "jkbmscpp",
+  "version": "1.0.0",
+  "description": "Library to connect ESP32 to JK BMS over BLE",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include"
+  }
+}
