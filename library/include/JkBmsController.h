@@ -18,23 +18,29 @@ namespace JkBmsCpp {
     class Source {
     public:
         virtual ~Source() = default;
+        /** Connect to the source */
         virtual SourceError connect() = 0;
+        /** Disconnect from the source */
         virtual SourceError disconnect() = 0;
+        /** Send a command to the source */
         virtual SourceError sendCommand(
             const JkBmsDataBuffer& command,
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid
         ) = 0;
+        /** Subscribe to a characteristic */
         virtual SourceError subscribe(
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid,
             void* context,
             void(*callback)(void* context, const JkBmsDataBuffer &data)
         ) = 0;
+        /** Unsubscribe from a characteristic */
         virtual SourceError unsubscribe(
             const JkBmsString& service_uuid,
             const JkBmsString& char_uuid
         ) = 0;
+        /** Get the MTU size of the source */
         virtual size_t getMtu() = 0;
     };
 
@@ -47,6 +53,7 @@ namespace JkBmsCpp {
         constexpr static size_t DEFAULT_PACKET_SIZE = 300;
     private:
         Source* source;
+        // TODO use JkBmsBuffer
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
         std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;

@@ -5,6 +5,10 @@
 namespace JkBmsCpp {
     enum class SourceError: uint8_t {
         SUCCESS = 0,
+        FAILURE = 1,
+        NOT_CONNECTED = 2,
+        ALREADY_CONNECTED = 3,
+        NO_SUCH_SERVICE = 4,
     };
 
     enum class ControllerError: uint8_t {

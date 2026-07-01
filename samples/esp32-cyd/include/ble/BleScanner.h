@@ -22,3 +22,10 @@ public:
     virtual void startScan(uint8_t scanTimeSeconds, uint8_t scanPeriodSeconds, Listener* listener) = 0;
     virtual void stopScan() = 0;
 };
+
+class DummyBleScanner: public BleScanner {
+public:
+    void init() override {}
+    void startScan(uint8_t scanTimeSeconds, uint8_t scanPeriodSeconds, Listener* listener) override {}
+    void stopScan() override {}
+};

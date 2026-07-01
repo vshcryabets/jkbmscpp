@@ -5,7 +5,14 @@
 #include "screens/ScanScreen.h"
 #include "TouchController.h"
 #include "ble/BleScanner.h"
-#include "ble/BleScannerBLEArduinoImpl.h"
+#ifdef ENABLE_ArduinoBLE
+  #include "ble/BleScannerBLEArduinoImpl.h"
+  #include "ble/JkBmsSourceBLEArduinoImpl.h"
+#elif ENABLE_NimBLE
+  #include "ble/BleScannerNimBleImpl.h"
+#else
+#endif
+
 #include "viewmodels/ViewModel.h"
 #include "viewmodels/ScanScreenViewModel.h"
 #include "viewmodels/DetailsScreenViewModel.h"
@@ -49,7 +56,14 @@ public:
 
 private:
   UiStateObserver uiStateObserver;
+#ifdef ENABLE_ArduinoBLE
   BleScannerBLEArduinoImpl bleScanner;
+#elif ENABLE_NimBLE
+  BleScannerNimBleImpl bleScanner;
+#else
+  DummyBleScanner bleScanner;
+#endif
+  // JkBmsSourceBLEArduinoImpl jkbmsSource;
   StartScanUseCaseImpl startScanUseCase;
   StopScanUseCaseImpl stopScanUseCase;
   TouchController touchController;
