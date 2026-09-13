@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 
 sealed interface UiEvent {
@@ -17,14 +18,18 @@ class DeviceListViewModel @Inject constructor(
     private val observeBleDevicesUseCase: ObserveBleDevicesUseCase,
 ): ViewModel() {
     private val _state = MutableStateFlow(DeviceListState())
+    private val scanRestartTrigger = MutableStateFlow(Unit) // Trigger to restart scanning
     val state = combine(
         _state,
-        observeBleDevicesUseCase
-            .execute()
+        scanRestartTrigger.flatMapLatest {
+            // Викликається при старті та при кожній зміні scanRestartTrigger
+            observeBleDevicesUseCase.execute()
+        }
     ) { innerState, scanResult ->
         if (scanResult.error != null) {
             handleScanError(scanResult.error)
         }
+        Log.d("DeviceListViewModel", "Scan result: ${scanResult.devices}")
         DeviceListState(
             items = scanResult.devices.toUi(),
             requestPermissions = innerState.requestPermissions,
@@ -54,6 +59,9 @@ class DeviceListViewModel @Inject constructor(
 
     fun onPermissionResult(granted: Boolean) {
         Log.d("DeviceListViewModel", "Permission result: $granted")
+        if (granted) {
+            scanRestartTrigger.tryEmit(Unit)
+        }
         _state.update {
             it.copy(requestPermissions = !granted)
         }
