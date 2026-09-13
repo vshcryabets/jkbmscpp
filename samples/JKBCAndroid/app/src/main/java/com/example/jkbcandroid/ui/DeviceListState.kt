@@ -7,6 +7,7 @@ import kotlinx.collections.immutable.persistentListOf
 @Immutable
 data class DeviceListItem(
     val name: String,
+    val hasNoName: Boolean = false,
     val address: String,
     val rssi: Int
 )

@@ -29,7 +29,7 @@ class DeviceListViewModel @Inject constructor(
         if (scanResult.error != null) {
             handleScanError(scanResult.error)
         }
-        Log.d("DeviceListViewModel", "Scan result: ${scanResult.devices}")
+//        Log.d("DeviceListViewModel", "Scan result: ${scanResult.devices}")
         DeviceListState(
             items = scanResult.devices.toUi(),
             requestPermissions = innerState.requestPermissions,

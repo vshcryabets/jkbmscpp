@@ -5,11 +5,18 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
 fun List<BLEDevice>.toUi(): ImmutableList<DeviceListItem> {
-    return this.map { device ->
-        DeviceListItem(
-            name = device.name,
-            address = device.address,
-            rssi = device.rssi
+    return this
+        .sortedWith(
+            compareBy<BLEDevice> { it.name.isBlank() }
+                .thenBy { it.name }
         )
-    }.toImmutableList()
+        .map { device ->
+            DeviceListItem(
+                name = if (device.name.isBlank()) "N/A" else device.name,
+                hasNoName = device.name.isBlank(),
+                address = device.address,
+                rssi = device.rssi
+            )
+        }
+        .toImmutableList()
 }
