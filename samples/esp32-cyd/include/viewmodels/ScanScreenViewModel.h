@@ -12,7 +12,7 @@ struct UiLabel
   char subtitle[24];
 };
 
-class ItempProvider
+class ItemProvider
 {
 public:
   virtual void getItem(int index, UiLabel &out) const = 0;
@@ -22,12 +22,12 @@ struct ScanScreenState
 {
   uint16_t itemCount = 0;
   uint16_t listOffset = 0;
-  const ItempProvider *itemProvider = nullptr;
+  const ItemProvider *itemProvider = nullptr;
 };
 
 class ScanScreenViewModel : public ViewModelAbstract<ScanScreenState>,
                             public BleScanner::Listener,
-                            public ItempProvider
+                            public ItemProvider
 {
 private:
   StartScanUseCase &startScanUseCase;

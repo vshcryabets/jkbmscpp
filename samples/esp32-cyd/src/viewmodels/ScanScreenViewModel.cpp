@@ -87,8 +87,9 @@ void ScanScreenViewModel::end()
 
 void ScanScreenViewModel::getItem(int index, UiLabel &out) const
 {
-    // TODO use mutex protection here
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
     BleScanner::ScanResult item = items.at(static_cast<size_t>(index));
+    xSemaphoreGive(stateMutex);
     macAddressToString(item.address, out.subtitle, sizeof(out.subtitle));
     const size_t titleSize = sizeof(out.title);
     if (item.name[0] == '\0') {
@@ -101,6 +102,6 @@ void ScanScreenViewModel::getItem(int index, UiLabel &out) const
     snprintf(
         out.title + strlen(out.title), 
         titleSize - strlen(out.title), 
-        " (%d dBm2)", item.rssi
+        " (%d dBm)", item.rssi
     );
 }

@@ -75,7 +75,7 @@ JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::subscribe(
         )
     );
     if (characteristic == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_SERVICE;
+        return JkBmsCpp::SourceError::NO_SUCH_CHARACTERISTIC;
     }
     characteristic->registerForNotify(
         [context, callback](
@@ -112,7 +112,7 @@ JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::unsubscribe(
         )
     );
     if (characteristic == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_SERVICE;
+        return JkBmsCpp::SourceError::NO_SUCH_CHARACTERISTIC;
     }
     characteristic->registerForNotify(nullptr);
     return JkBmsCpp::SourceError::SUCCESS; 

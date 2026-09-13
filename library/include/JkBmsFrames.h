@@ -9,6 +9,7 @@ namespace JkBmsCpp {
         NOT_CONNECTED = 2,
         ALREADY_CONNECTED = 3,
         NO_SUCH_SERVICE = 4,
+        NO_SUCH_CHARACTERISTIC = 5,
     };
 
     enum class ControllerError: uint8_t {
