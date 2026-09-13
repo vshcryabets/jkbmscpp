@@ -12,6 +12,13 @@ data class DeviceListItem(
 )
 
 @Immutable
+sealed interface UiDialog {
+    object None: UiDialog
+}
+
+@Immutable
 data class DeviceListState(
     val items: ImmutableList<DeviceListItem> = persistentListOf(),
+    val requestPermissions: Boolean = false,
+    val dialog: UiDialog = UiDialog.None,
 )

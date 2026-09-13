@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import com.example.jkbcandroid.ui.AppNavigation
 import com.example.jkbcandroid.ui.DeviceListScreen
 import dagger.hilt.android.AndroidEntryPoint
 import com.example.jkbcandroid.ui.theme.JKBCAndroidTheme
@@ -20,11 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             JKBCAndroidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DeviceListScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                AppNavigation()
             }
         }
     }

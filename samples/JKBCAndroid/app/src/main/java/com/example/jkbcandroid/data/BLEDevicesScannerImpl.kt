@@ -5,17 +5,17 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import com.example.jkbcandroid.domain.BLEDevice
 import com.example.jkbcandroid.domain.BLEDevicesScanner
+import com.example.jkbcandroid.domain.ScanResult
 import com.example.jkbcandroid.domain.SessionId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
+
 
 @Singleton
 class BLEDevicesScannerImpl @Inject constructor(
@@ -29,24 +29,40 @@ class BLEDevicesScannerImpl @Inject constructor(
     }
 
     // Shared discovered devices map, keyed by address
-    private val devicesFlow = MutableStateFlow<Map<String, BLEDevice>>(emptyMap())
+    private val scanResultFlow = MutableStateFlow(
+        ScanResult(
+            devices = emptyList(),
+            timestamp = System.currentTimeMillis(),
+            error = null
+        )
+    )
 
     private val sessions = ConcurrentHashMap<SessionId, Unit>()
     private val sessionIdCounter = AtomicInteger(0)
 
     private val scanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
+        override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult) {
             val device = BLEDevice(
                 name = result.device.name ?: result.device.address,
                 address = result.device.address,
                 rssi = result.rssi
             )
-            devicesFlow.value = devicesFlow.value + (device.address to device)
+            val devicesByAddress = scanResultFlow.value.devices.associateBy { it.address }.toMutableMap()
+            devicesByAddress[device.address] = device
+            scanResultFlow.value = ScanResult(
+                devices = devicesByAddress.values.toList(),
+                timestamp = System.currentTimeMillis(),
+                error = null
+            )
         }
 
         override fun onScanFailed(errorCode: Int) {
-            // Scan failed — device list unchanged
+            scanResultFlow.value = ScanResult(
+                devices = scanResultFlow.value.devices,
+                timestamp = System.currentTimeMillis(),
+                error = IllegalStateException("BLE scan failed with error code: $errorCode")
+            )
         }
     }
 
@@ -56,8 +72,20 @@ class BLEDevicesScannerImpl @Inject constructor(
         val wasEmpty = sessions.isEmpty()
         sessions[id] = Unit
         if (wasEmpty) {
-            devicesFlow.value = emptyMap()
-            bluetoothLeScanner?.startScan(scanCallback)
+            scanResultFlow.value = ScanResult(
+                devices = emptyList(),
+                timestamp = System.currentTimeMillis(),
+                error = null
+            )
+            try {
+                bluetoothLeScanner?.startScan(scanCallback)
+            } catch (e: SecurityException) {
+                scanResultFlow.value = ScanResult(
+                    devices = emptyList(),
+                    timestamp = System.currentTimeMillis(),
+                    error = e
+                )
+            }
         }
         return id
     }
@@ -71,14 +99,18 @@ class BLEDevicesScannerImpl @Inject constructor(
         return removed
     }
 
-    override fun getScannedDevices(sessionId: SessionId): List<BLEDevice> {
-        if (!sessions.containsKey(sessionId)) return emptyList()
-        return devicesFlow.value.values.toList()
+    override fun getScannedDevices(sessionId: SessionId): ScanResult {
+        if (!sessions.containsKey(sessionId)) {
+            return ScanResult(
+                devices = emptyList(),
+                timestamp = System.currentTimeMillis(),
+                error = IllegalArgumentException("Session $sessionId is not active")
+            )
+        }
+        return scanResultFlow.value
     }
 
-    override fun observeScannedDevices(sessionId: SessionId): Flow<List<BLEDevice>> {
-        return devicesFlow.map { map ->
-            if (sessions.containsKey(sessionId)) map.values.toList() else emptyList()
-        }
+    override fun observeScannedDevices(sessionId: SessionId): Flow<ScanResult> {
+        return scanResultFlow
     }
 }
