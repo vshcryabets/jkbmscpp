@@ -40,6 +40,8 @@ struct UiEvent {
     virtual ~UiEvent() = default;
 };
 
+class ExitAppEvent : public UiEvent {};
+
 class ViewModel {
 private:
     flow::StateFlow<std::shared_ptr<ViewState>> stateFlow;

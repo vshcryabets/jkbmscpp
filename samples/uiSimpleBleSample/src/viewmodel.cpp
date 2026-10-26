@@ -7,6 +7,10 @@
 ViewModel::ViewModel() : stateFlow(
     std::make_shared<ViewState>(ViewState{
     .currentScreen = Screen::DEVICE_LIST,
-    .devices = std::vector<std::string>{}
+    .devices = std::vector<std::string>{"a", "b", "c"}
 })) {
+}
+
+void ViewModel::onUiAction(const UiEvent& event) {
+    (void)event;
 }

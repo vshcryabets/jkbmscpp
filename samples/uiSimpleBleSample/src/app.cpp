@@ -4,6 +4,8 @@
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 
+#include <spdlog/spdlog.h>
+
 using namespace ftxui;
 
 using namespace ftxui;
@@ -12,16 +14,8 @@ using namespace ftxui;
 App::App(ViewModel &viewModel) : 
     viewModel_(viewModel), 
     screen_(ScreenInteractive::Fullscreen()) {
-    viewModel.getStateFlow().subscribe(this);
     menu_entries_ = {
-        "Connect",
-        "Save logs",
-        "Load current",
-        "Cutoff voltage",
-        "Set timer",
-        "Enable Load",
-        "Test action",
-        "Quit",
+        "Quit"
     };
 }
 
@@ -30,46 +24,55 @@ App::~App() {
 }
 
 void App::run() {
-    // 1. Define State
-    int menu_selected = 0;
-
     // 2. Create the Menu Component
     MenuOption option;
     option.on_enter = [&] {
-        switch (menu_selected)
+        if (menu_selected_ >= 0 && menu_selected_ < static_cast<int>(menu_entries_.size()) &&
+            menu_entries_[menu_selected_] == "Quit")
         {
-        case 0:  // Connect / Disconnect
-            break;
-        case 1:  // Save logs
-            break;
-        case 2:  // Test action
-            break;
-        case 3:  // Quit
-            break;
-        default:
-            break;
+            viewModel_.onUiAction(ExitAppEvent{});
+            screen_.Exit();
         }
     };
-    auto menu = Menu(&menu_entries_, &menu_selected, option);
+    auto menu = Menu(&menu_entries_, &menu_selected_, option);
 
-    // 3. Create the Main Layout
-    // We wrap the interactive menu in a Renderer to define how the screen is drawn
-    auto layout = Renderer(menu, [&,state = viewModel_.getStateFlow().state()] {
+    auto layout = Renderer(menu, [&, menu] {    
+        {
+            std::lock_guard<std::mutex> lock(state_mutex_);
+            if (needs_update_) {
+                menu_entries_ = pending_entries_;
+                
+                // Fix cursor postiotion
+                if (menu_selected_ >= static_cast<int>(menu_entries_.size())) {
+                    menu_selected_ = menu_entries_.empty() ? 0 : static_cast<int>(menu_entries_.size()) - 1;
+                }
+                needs_update_ = false; // Скидаємо прапорець
+            }
+        }
 
-        // Create the Menu window
-        auto menu_window = window(text(" Menu "),
-            menu->Render()
-        ) | size(WIDTH, EQUAL, 25); // Fixed width of 25 characters
-
-        // Combine them side-by-side (split screen)
         return hbox({
-            menu_window
+            window(text(" Menu "), menu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32)
         });
     });
-    // 4. Run the application
+
+    viewModel_.getStateFlow().subscribe(this);
     screen_.Loop(layout);
 }
 
 void App::on_state_changed(const std::shared_ptr<ViewState>& state) {
-    
+    spdlog::info("App::on_state_changed: state changed, updating menu entries");
+    std::vector<std::string> next_entries;
+
+    if (state && state->devices.has_value()) {
+        next_entries = state->devices.value();
+    }
+    next_entries.push_back("Quit");
+
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        pending_entries_ = std::move(next_entries);
+        needs_update_ = true;
+    }
+
+    screen_.PostEvent(ftxui::Event::Custom);    
 }

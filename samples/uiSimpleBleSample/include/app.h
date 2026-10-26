@@ -15,14 +15,17 @@ class App: public flow::StateListener<std::shared_ptr<ViewState>> {
 private:
     ViewModel &viewModel_;
     ftxui::ScreenInteractive screen_;
-    std::string device_path;
-    ftxui::Component connectToDeviceDialog();
 
-    std::mutex state_mutex_;
+
+    // UI only thread data
+    int menu_selected_ = 0;
     std::vector<std::string> menu_entries_;
 
-    int current_value_cA = 150;
-    int cutoff_voltage_mV = 270;
+    // callback data
+    std::mutex state_mutex_;
+    std::vector<std::string> pending_entries_;
+    bool needs_update_ = false;
+
 public:
     App(ViewModel &viewModel);
     ~App();
