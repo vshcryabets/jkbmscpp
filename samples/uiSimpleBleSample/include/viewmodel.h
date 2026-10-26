@@ -2,71 +2,52 @@
 
 #include <string>
 #include <vector>
-#include <memory>
+#include <optional>
 
-#include "Source.h"
-#include "Controller.h"
+#include "stateflow.h"
 
-struct ViewState {
-    bool show_connect_dialog = false;
-    std::string device_path = "";
-    std::vector<std::string> uart_logs = {};
-    bool isConnected = false;
-    bool shouldCloseApp = false;
+enum class Screen: uint8_t {
+    DEVICE_LIST = 1,
+    DEVICE_INFO
 };
 
-class StateListener {
-public:
-    virtual ~StateListener() = default;
-    virtual void onStateChanged(const ViewState& state) = 0;
+struct ViewState {
+    const std::optional<Screen> currentScreen = std::nullopt;
+    const std::optional<std::vector<std::string>> devices = std::nullopt;
+
+    [[nodiscard]] bool operator==(const ViewState& other) const {
+        return currentScreen == other.currentScreen && devices == other.devices;
+    }
+
+    [[nodiscard]] bool operator!=(const ViewState& other) const {
+        return !(*this == other);
+    }
+
+    [[nodiscard]] ViewState copy(const ViewState &copy) const {
+        ViewState result = {
+            .currentScreen = copy.currentScreen.has_value() ? copy.currentScreen : this->currentScreen,
+            .devices = copy.devices.has_value() ? copy.devices : this->devices
+        };
+        return result;
+    }
+
+    ViewState operator+(const ViewState& other) const {
+        return this->copy(other);
+    }
 };
 
 struct UiEvent {
     virtual ~UiEvent() = default;
 };
-struct ConnectDialogCanceled: public UiEvent {};
-struct OnConnectRequested: public UiEvent {};
-struct OnLoadStart: public UiEvent {};
-struct OnLoadStop: public UiEvent {};
-struct ResetStatistics: public UiEvent {};
-struct OnExitClicked: public UiEvent {};
-struct OnSaveLogsRequested: public UiEvent {};
-struct TestActionRequested: public UiEvent {};
-struct Open: public UiEvent {
-    Open(std::string path) : filepath(path), UiEvent() {}
-    std::string filepath;
-};
-struct LoadSetCurrent: public UiEvent {
-    LoadSetCurrent(float current) : current(current), UiEvent() {}
-    float current;
-};
-struct LoadSetVoltage: public UiEvent {
-    LoadSetVoltage(float voltage) : voltage(voltage), UiEvent() {}
-    float voltage;
-};
 
-class ViewModel: public dl24::DebugListener {
+class ViewModel {
 private:
-    void loadConfiguration(std::string configFilePath);
-    void saveConfiguration(std::string configFilePath);
+    flow::StateFlow<std::shared_ptr<ViewState>> stateFlow;
 
-    ViewState state;
 
-    std::unique_ptr<dl24::Source> source_;
-    std::unique_ptr<dl24::Controller> controller_;
-    StateListener* stateListener_ = nullptr;
-
-    void onOpenDevice(const Open* event);
-    void onCloseDevice();
-
-    void onDebugMessage(dl24::DebugListener::Level level, const std::string& message) override;
-    void saveLogs();
-    void testAction();
 public:
     ViewModel();
     virtual ~ViewModel() = default;
     void onUiAction(const UiEvent& event);
-    const ViewState& getState() const { return state; }
-    void setStateListener(StateListener* listener) { stateListener_ = listener; }
-    void addLogMessage(const std::string& message);
+    flow::StateFlow<std::shared_ptr<ViewState>>& getStateFlow() { return stateFlow; }
 };

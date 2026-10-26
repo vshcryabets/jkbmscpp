@@ -11,7 +11,7 @@
 
 #include "viewmodel.h"
 
-class App: public StateListener {
+class App: public flow::StateListener<std::shared_ptr<ViewState>> {
 private:
     ViewModel &viewModel_;
     ftxui::ScreenInteractive screen_;
@@ -24,8 +24,8 @@ private:
     int current_value_cA = 150;
     int cutoff_voltage_mV = 270;
 public:
-    SampleDl24App(ViewModel &viewModel);
-    ~SampleDl24App();
+    App(ViewModel &viewModel);
+    ~App();
     void run();
-    void onStateChanged(const ViewState& state) override;
+    void on_state_changed(const std::shared_ptr<ViewState>& state) override;
 };

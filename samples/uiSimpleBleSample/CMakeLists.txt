@@ -1,6 +1,8 @@
 add_executable(uiSimpleBleSample
     src/main.cpp
     src/JkBmsSourceSimpleBleImpl.cpp
+    src/viewmodel.cpp
+    src/app.cpp
 )
 
 include(FetchContent)
@@ -26,4 +28,5 @@ target_include_directories(uiSimpleBleSample PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
     ${simpleble_SOURCE_DIR}/include
+    ${spdlog_SOURCE_DIR}/include
 )
