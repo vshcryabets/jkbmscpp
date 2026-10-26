@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include "CFunctions.h"
 
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
@@ -80,16 +81,7 @@ namespace JkBmsCpp {
 #endif
 
     typedef std::vector<uint8_t> JkBmsByteBuffer;
-
-    class JkBmsDataBuffer {
-        private:
-            uint8_t* _data;
-            uint16_t _size;
-        public:
-            JkBmsDataBuffer(uint8_t* data, uint16_t size)
-                : _data(data), _size(size) {}
-            ~JkBmsDataBuffer() = default;
-            uint8_t* data() const { return _data; }
-            uint16_t size() const { return _size; }            
-    };
+    
+    typedef ::JkBmsDataBuffer_C JkBmsDataBuffer_C;
+    typedef ::UuidStr UuidStr;
 }

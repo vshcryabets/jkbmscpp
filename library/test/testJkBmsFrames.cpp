@@ -122,35 +122,35 @@ constexpr uint8_t SAMPLE_DEVICE_INFO_FRAME[] = {
 
 TEST_CASE("checkFrameStart", "[JkBmsFrames]") {
     uint8_t correctBuffer[] = {0x55, 0xaa, 0xeb, 0x90, 0x00};
-    JkBmsCpp::JkBmsDataBuffer buffer1(correctBuffer, 5);    
-    REQUIRE(JkBmsCpp::checkFrameStart(buffer1) == true);
+    JkBmsCpp::JkBmsDataBuffer_C buffer1 = {correctBuffer, 5};    
+    REQUIRE(::checkFrameStart(buffer1) == true);
 
     uint8_t incorrectBuffer[] = {0x22, 0xaa, 0xeb, 0x90, 0x00};
-    JkBmsCpp::JkBmsDataBuffer buffer2(incorrectBuffer, 5);
-    REQUIRE(JkBmsCpp::checkFrameStart(buffer2) == false);
+    JkBmsCpp::JkBmsDataBuffer_C buffer2 = {incorrectBuffer, 5};
+    REQUIRE(::checkFrameStart(buffer2) == false);
 
-    JkBmsCpp::JkBmsDataBuffer buffer3((uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
-        sizeof(SAMPLE_DEVICE_INFO_FRAME));    
-    REQUIRE(JkBmsCpp::checkFrameStart(buffer3) == true);
+    JkBmsCpp::JkBmsDataBuffer_C buffer3 = {(uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
+        sizeof(SAMPLE_DEVICE_INFO_FRAME)};    
+    REQUIRE(::checkFrameStart(buffer3) == true);
 }
 
 TEST_CASE("checkFrameChecksum", "[JkBmsFrames]") {
     uint8_t correctBuffer[] = {0x55, 0xaa, 0xeb, 0x90, 0x01, 0x7b};
-    JkBmsCpp::JkBmsDataBuffer buffer1(correctBuffer, 6);    
-    REQUIRE(JkBmsCpp::checkFrameChecksum(buffer1) == true);
+    JkBmsCpp::JkBmsDataBuffer_C buffer1 = {correctBuffer, 6};    
+    REQUIRE(::checkFrameChecksum(buffer1) == true);
 
     uint8_t incorrectBuffer[] = {0x55, 0xaa, 0xeb, 0x90, 0x01, 0x2f};
-    JkBmsCpp::JkBmsDataBuffer buffer2(incorrectBuffer, 6);    
-    REQUIRE(JkBmsCpp::checkFrameChecksum(buffer2) == false);
+    JkBmsCpp::JkBmsDataBuffer_C buffer2 = {incorrectBuffer, 6};    
+    REQUIRE(::checkFrameChecksum(buffer2) == false);
 
-    JkBmsCpp::JkBmsDataBuffer buffer3((uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
-        sizeof(SAMPLE_DEVICE_INFO_FRAME));    
-    REQUIRE(JkBmsCpp::checkFrameChecksum(buffer3) == true);
+    JkBmsCpp::JkBmsDataBuffer_C buffer3 = {(uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
+        sizeof(SAMPLE_DEVICE_INFO_FRAME)};    
+    REQUIRE(::checkFrameChecksum(buffer3) == true);
 }
 
 TEST_CASE("parseDeviceInfo", "[JkBmsFrames]") {
-    JkBmsCpp::JkBmsDataBuffer buffer((uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
-        sizeof(SAMPLE_DEVICE_INFO_FRAME));
+    JkBmsCpp::JkBmsDataBuffer_C buffer = {(uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
+        sizeof(SAMPLE_DEVICE_INFO_FRAME)};
     auto deviceInfo = JkBmsCpp::parseDeviceInfo(buffer);
     REQUIRE(deviceInfo.hasValue() == true);
     auto info = deviceInfo.value();
@@ -166,8 +166,8 @@ TEST_CASE("parseDeviceInfo", "[JkBmsFrames]") {
 }
 
 TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
-    JkBmsCpp::JkBmsDataBuffer buffer((uint8_t*)SAMPLE_CELL_INFO_FRAME, 
-        sizeof(SAMPLE_CELL_INFO_FRAME));
+    JkBmsCpp::JkBmsDataBuffer_C buffer = {(uint8_t*)SAMPLE_CELL_INFO_FRAME, 
+        sizeof(SAMPLE_CELL_INFO_FRAME)};
     auto cellsInfo = JkBmsCpp::parseCellsInfo(buffer, CellInfoResponse::CELL_COUNT);
     REQUIRE(cellsInfo.hasValue() == true);
     auto& info = cellsInfo.value();
@@ -215,15 +215,16 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
 
 TEST_CASE("calculateCRC", "[JkBmsFrames]") {
     uint8_t byteBuffer[20];
-    JkBmsCpp::JkBmsDataBuffer buffer(byteBuffer, sizeof(byteBuffer));
+    JkBmsCpp::JkBmsDataBuffer_C buffer = {byteBuffer, (uint16_t)sizeof(byteBuffer)};
     prepareCommandBuffer(0x96, 0, 0, buffer);
-    uint8_t crc = JkBmsCpp::calculateCRC(JkBmsCpp::JkBmsDataBuffer(buffer.data(), buffer.size() - 1));
+    JkBmsCpp::JkBmsDataBuffer_C crcBuffer = {buffer.ptr, (uint16_t)(buffer.len - 1)};
+    uint8_t crc = ::calculateCRC(crcBuffer);
     REQUIRE(crc == 0x10);
 }
 
 TEST_CASE("prepareCommandBuffer", "[JkBmsFrames]") {
     uint8_t byteBuffer[20];
-    JkBmsCpp::JkBmsDataBuffer buffer(byteBuffer, sizeof(byteBuffer));
+    JkBmsCpp::JkBmsDataBuffer_C buffer = {byteBuffer, (uint16_t)sizeof(byteBuffer)};
     prepareCommandBuffer(0x38, 0x12345678, 4, buffer);
     REQUIRE(byteBuffer[0] == 0xaa);
     REQUIRE(byteBuffer[1] == 0x55);
@@ -252,7 +253,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
     
     SECTION("Valid CELL_INFO response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x02}; // CELL_INFO = 0x02
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
@@ -261,7 +262,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
     
     SECTION("Valid DEVICE_INFO response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x03}; // DEVICE_INFO = 0x03
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
@@ -270,7 +271,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
     
     SECTION("Valid SETTINGS response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x01}; // SETTINGS = 0x01
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE(result.hasValue());
@@ -279,46 +280,46 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
     
     SECTION("Invalid magic bytes") {
         std::vector<uint8_t> buffer = {0x54, 0xaa, 0xeb, 0x90, 0x02}; // Wrong first byte
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == ControllerError::INVALID_MAGIC_BYTES);
+        REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_MAGIC_BYTES);
     }
     
     SECTION("Buffer too small") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb}; // Only 3 bytes
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == ControllerError::INVALID_MAGIC_BYTES);
+        REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_MAGIC_BYTES);
     }
     
     SECTION("Buffer exactly 4 bytes - missing response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90}; // Missing response type byte
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
     
     SECTION("Invalid response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0xFF}; // Invalid response type
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
     
     SECTION("Another invalid response type") {
         std::vector<uint8_t> buffer = {0x55, 0xaa, 0xeb, 0x90, 0x00}; // Invalid response type
-        JkBmsDataBuffer dataBuffer(buffer.data(), buffer.size());
+        JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
         REQUIRE_FALSE(result.hasValue());
-        REQUIRE(result.error() == ControllerError::INVALID_RESPONSE_TYPE);
+        REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
 }

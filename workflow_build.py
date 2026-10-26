@@ -5,7 +5,7 @@ import sys
 
 if "--prepare" in sys.argv:
     subprocess.run(
-        ["cmake", "-B", "./build", "-DCMAKE_BUILD_TYPE=Release", "-S", "./samples/simpleBleSample"],
+        ["cmake", "-B", "./build", "-DCMAKE_BUILD_TYPE=Release", "-S", "./"],
         check=True
     )
 if "--build" in sys.argv:
@@ -19,3 +19,9 @@ if "--test" in sys.argv:
         cwd="./build",
         check=True
     )
+if "--clean" in sys.argv:
+    subprocess.run(
+        ["rm","-rf", "./build"],
+        check=True
+    )
+    

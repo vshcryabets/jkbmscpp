@@ -3,23 +3,23 @@
 
 namespace JkBmsCpp {
 
-    Expected<CellInfoResponse, ControllerError> 
+    Expected<CellInfoResponse, ControllerError_C> 
     parseCellsInfo(
-        const JkBmsDataBuffer& buffer,
+        const JkBmsDataBuffer_C buffer,
         uint8_t cellCount
     ) {
         if (!checkFrameStart(buffer)) {
-            return ControllerError::INVALID_MAGIC_BYTES;
+            return CONTROLLER_ERROR_INVALID_MAGIC_BYTES;
         }
         if (!checkFrameChecksum(buffer)) {
-            return ControllerError::CRC_MISMATCH;
+            return CONTROLLER_ERROR_CRC_MISMATCH;
         }
-        if (buffer.size() != 300) {
-            return ControllerError::INVALID_RESPONSE_TYPE;
+        if (buffer.len != 300) {
+            return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
-        const uint8_t* data = (const uint8_t*)buffer.data();
-        if (buffer.data()[4] != static_cast<uint8_t>(ResponseType::CELL_INFO)) {
-            return ControllerError::INVALID_RESPONSE_TYPE;
+        const uint8_t* data = (const uint8_t*)buffer.ptr;
+        if (buffer.ptr[4] != static_cast<uint8_t>(ResponseType::CELL_INFO)) {
+            return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
         CellInfoResponse response;
         uint16_t pos = 6;
@@ -79,28 +79,28 @@ namespace JkBmsCpp {
         return response;
     }
 
-    Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
-        const JkBmsDataBuffer& buffer) {
+    Expected<DeviceInfoResponse, ControllerError_C> parseDeviceInfo(
+        const JkBmsDataBuffer_C buffer) {
         if (!checkFrameStart(buffer)) {
-            return ControllerError::INVALID_MAGIC_BYTES;
+            return CONTROLLER_ERROR_INVALID_MAGIC_BYTES;
         }
         if (!checkFrameChecksum(buffer)) {
-            return ControllerError::CRC_MISMATCH;
+            return CONTROLLER_ERROR_CRC_MISMATCH;
         }
-        if (buffer.size() != 300) {
-            return ControllerError::INVALID_RESPONSE_TYPE;
+        if (buffer.len != 300) {
+            return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
-        const char* data = (const char*)buffer.data();
+        const char* data = (const char*)buffer.ptr;
         if (data[4] != static_cast<char>(ResponseType::DEVICE_INFO)) {
-            return ControllerError::INVALID_RESPONSE_TYPE;
+            return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
         DeviceInfoResponse response;
         // Parsing logic to extract fields from buffer
         response.vendorId = JkBmsString(data + 6, strnlen(data + 6, 16));
         response.hwVersion = JkBmsString(data + 22, strnlen(data + 22, 8));
         response.swVersion = JkBmsString(data + 30, strnlen(data + 30, 8));
-        response.uptimeSeconds = getUInt32LE(buffer.data(), 38);
-        response.powerOnCounter = getUInt32LE(buffer.data(), 42);
+        response.uptimeSeconds = getUInt32LE(buffer.ptr, 38);
+        response.powerOnCounter = getUInt32LE(buffer.ptr, 42);
         response.deviceName = JkBmsString(data + 46, strnlen(data + 46, 16));
         response.devicePasscode = JkBmsString(data + 62, strnlen(data + 62, 16));
         response.manufacturedate = JkBmsString(data + 78, strnlen(data + 78, 8));
@@ -111,36 +111,16 @@ namespace JkBmsCpp {
         return response;
     }
 
-    bool checkFrameStart(const JkBmsDataBuffer &buffer) {
-        if (buffer.size() < 4) {
-            return false;
-        }
-        const uint8_t* data = buffer.data();
-        return data[0] == 0x55 && data[1] == 0xaa && data[2] == 0xeb && data[3] == 0x90;
-    }
-
-    bool checkFrameChecksum(const JkBmsDataBuffer &buffer) {
-        if (buffer.size() < 5) {
-            return false;
-        }
-        const uint8_t* data = buffer.data();
-        uint8_t checksum = 0;
-        for (size_t i = 0; i < buffer.size() - 1; i++) {
-            checksum += data[i];
-        }
-        return checksum == data[buffer.size() - 1];
-    }
-
-    Expected<ResponseType, ControllerError> getResponseType(
-        const JkBmsDataBuffer& buffer
+    Expected<ResponseType, ControllerError_C> getResponseType(
+        const JkBmsDataBuffer_C buffer
     ) {
         if (!checkFrameStart(buffer)) {
-            return ControllerError::INVALID_MAGIC_BYTES;
+            return CONTROLLER_ERROR_INVALID_MAGIC_BYTES;
         }
-        if (buffer.size() < 5) {
-            return ControllerError::INVALID_RESPONSE_TYPE;
+        if (buffer.len < 5) {
+            return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
-        const uint8_t* data = buffer.data();
+        const uint8_t* data = buffer.ptr;
         ResponseType responseType = static_cast<ResponseType>(data[4]);
         switch (responseType) {
             case ResponseType::SETTINGS:
@@ -148,39 +128,8 @@ namespace JkBmsCpp {
             case ResponseType::DEVICE_INFO:
                 return responseType;
             default:
-                return ControllerError::INVALID_RESPONSE_TYPE;
+                return CONTROLLER_ERROR_INVALID_RESPONSE_TYPE;
         }
     }
 
-    uint8_t calculateCRC(const JkBmsDataBuffer& buffer) {
-        uint8_t crc = 0;
-        for (uint16_t i = 0; i < buffer.size(); i++) {
-            crc += buffer.data()[i];
-        }
-        return crc;
-    }
-
-    ControllerError prepareCommandBuffer(uint8_t reg, 
-        uint32_t value,
-        uint8_t length,
-        const JkBmsDataBuffer& outBuffer) {
-        if (outBuffer.size() < 20) {
-            return ControllerError::BUFFER_TOO_SMALL;
-        }
-        constexpr size_t CRC_FRAME_SIZE = 19;
-        uint8_t* frame = outBuffer.data();
-        memset(frame, 0, outBuffer.size());
-        frame[0] = 0xAA;     // start sequence
-        frame[1] = 0x55;     // start sequence
-        frame[2] = 0x90;     // start sequence
-        frame[3] = 0xEB;     // start sequence
-        frame[4] = reg;     // holding register
-        frame[5] = length;   // size of the value in byte
-        frame[6] = value >> 0;
-        frame[7] = value >> 8;
-        frame[8] = value >> 16;
-        frame[9] = value >> 24;
-        frame[19] = calculateCRC(JkBmsDataBuffer(frame, CRC_FRAME_SIZE));
-        return ControllerError::SUCCESS;
-    }
 };

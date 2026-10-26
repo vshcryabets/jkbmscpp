@@ -10,21 +10,21 @@ class JkBmsSourceSimpleBleImpl : public JkBmsCpp::Source {
         JkBmsSourceSimpleBleImpl(const SimpleBLE::Peripheral &peripheral);
         virtual ~JkBmsSourceSimpleBleImpl();
 
-        virtual JkBmsCpp::SourceError connect() override;
-        virtual JkBmsCpp::SourceError disconnect() override;
-        virtual JkBmsCpp::SourceError sendCommand(
-            const JkBmsCpp::JkBmsDataBuffer& command,
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid) override;
+        virtual SourceError connect() override;
+        virtual SourceError disconnect() override;
+        virtual SourceError sendCommand(
+            const JkBmsCpp::JkBmsDataBuffer_C command,
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid) override;
         virtual size_t getMtu() override;
-        virtual JkBmsCpp::SourceError subscribe(
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid,
+        virtual SourceError subscribe(
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid,
             void* context,
-            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer& data)
+            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C data)
         ) override;
-        virtual JkBmsCpp::SourceError unsubscribe(
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid
+        virtual SourceError unsubscribe(
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid
         ) override;        
 };

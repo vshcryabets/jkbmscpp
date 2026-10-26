@@ -1,26 +1,9 @@
 #pragma once
 
 #include "CppWrappers.h"
+#include "CFunctions.h"
 
 namespace JkBmsCpp {
-    enum class SourceError: uint8_t {
-        SUCCESS = 0,
-        FAILURE = 1,
-        NOT_CONNECTED = 2,
-        ALREADY_CONNECTED = 3,
-        NO_SUCH_SERVICE = 4,
-        NO_SUCH_CHARACTERISTIC = 5,
-    };
-
-    enum class ControllerError: uint8_t {
-        SUCCESS = 0,
-        ERROR_NO_SOURCE = 1,
-        CRC_MISMATCH = 2,
-        INVALID_MAGIC_BYTES = 3,
-        INVALID_RESPONSE_TYPE = 4,
-        BUFFER_TOO_SMALL = 5,
-    };
-
     enum class ResponseType: uint8_t {
         SETTINGS = 0x01,
         CELL_INFO = 0x02,
@@ -75,43 +58,16 @@ namespace JkBmsCpp {
             JkBmsString setupPasscode;
     };
 
-    inline uint16_t getUInt16LE(const uint8_t* data, size_t pos) {
-        return (uint16_t)data[pos] | ((uint16_t)data[pos + 1] << 8);
-    }
-    inline int16_t getInt16LE(const uint8_t* data, size_t pos) {
-        return static_cast<int16_t>(data[pos] | ((uint16_t)data[pos + 1] << 8));
-    }
-    inline uint32_t getUInt32LE(const uint8_t* data, size_t pos) {
-        return (uint32_t)data[pos] | 
-            ((uint32_t)data[pos + 1] << 8) | 
-            ((uint32_t)data[pos + 2] << 16) | 
-            ((uint32_t)data[pos + 3] << 24);
-    }
-    inline int32_t getInt32LE(const uint8_t* data, size_t pos) {
-        return static_cast<int32_t>(data[pos] | 
-            ((uint32_t)data[pos + 1] << 8) | 
-            ((uint32_t)data[pos + 2] << 16) | 
-            ((uint32_t)data[pos + 3] << 24));
-    }
-
-    Expected<ResponseType, ControllerError> getResponseType(
-        const JkBmsDataBuffer& buffer
+    Expected<ResponseType, ControllerError_C> getResponseType(
+        const JkBmsDataBuffer_C buffer
     );
-    bool checkFrameStart(const JkBmsDataBuffer& buffer);
-    bool checkFrameChecksum(const JkBmsDataBuffer& buffer);
-    Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
-        const JkBmsDataBuffer& buffer
+    Expected<DeviceInfoResponse, ControllerError_C> parseDeviceInfo(
+        const JkBmsDataBuffer_C buffer
     );
-    Expected<CellInfoResponse, ControllerError> 
+    Expected<CellInfoResponse, ControllerError_C> 
     parseCellsInfo(
-        const JkBmsDataBuffer& buffer,
+        const JkBmsDataBuffer_C buffer,
         uint8_t cellCount
     );
-    
-    uint8_t calculateCRC(const JkBmsDataBuffer& buffer);
-    ControllerError prepareCommandBuffer(uint8_t reg, 
-        uint32_t value,
-        uint8_t length,
-        const JkBmsDataBuffer& outBuffer);
 
 };

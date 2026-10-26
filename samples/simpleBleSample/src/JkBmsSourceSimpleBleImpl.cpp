@@ -12,53 +12,51 @@ JkBmsSourceSimpleBleImpl::~JkBmsSourceSimpleBleImpl() {
     disconnect();
 }
 
-JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::sendCommand(
-    const JkBmsCpp::JkBmsDataBuffer& command,
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid) {
-    SimpleBLE::ByteArray command_bytes(command.data(), command.size());
-    std::cout << "Sending command (" << command.size() << " bytes):" << std::endl;
-    JkBmsCpp::dumpDataToLog(command.data(), command.size());
+SourceError JkBmsSourceSimpleBleImpl::sendCommand(
+    const JkBmsCpp::JkBmsDataBuffer_C command,
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid) {
+    SimpleBLE::ByteArray command_bytes(command.ptr, command.ptr + command.len);
+    std::cout << "Sending command (" << command.len << " bytes):" << std::endl;
+    JkBmsCpp::dumpDataToLog(command.ptr, command.len);
     peripheral.write_request(service_uuid, char_uuid, command_bytes);
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::connect() {
+SourceError JkBmsSourceSimpleBleImpl::connect() {
     peripheral.connect();
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::disconnect() {
+SourceError JkBmsSourceSimpleBleImpl::disconnect() {
     peripheral.disconnect();
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
 size_t JkBmsSourceSimpleBleImpl::getMtu() {
     return peripheral.mtu();
 }
 
-JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::subscribe(
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid,
+SourceError JkBmsSourceSimpleBleImpl::subscribe(
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer& data)
+    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C data)
 ) {
     peripheral.notify(service_uuid, 
         char_uuid, [callback, context](SimpleBLE::ByteArray bytes) {
-            callback(
-                context, 
-                JkBmsCpp::JkBmsDataBuffer(
-                    bytes.data(),
-                    static_cast<uint16_t>(bytes.size())
-                ));
+            JkBmsCpp::JkBmsDataBuffer_C buffer;
+            buffer.ptr = bytes.data();
+            buffer.len = static_cast<uint16_t>(bytes.size());
+            callback(context, buffer);
     });
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceSimpleBleImpl::unsubscribe(
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid
+SourceError JkBmsSourceSimpleBleImpl::unsubscribe(
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid
 ) {
     peripheral.unsubscribe(service_uuid, char_uuid);
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
