@@ -19,11 +19,13 @@ private:
 
     // UI only thread data
     int menu_selected_ = 0;
-    std::vector<std::string> menu_entries_;
+    std::vector<std::string> scanned_devices_;
+    std::vector<std::string> host_devices_;
 
     // callback data
     std::mutex state_mutex_;
-    std::vector<std::string> pending_entries_;
+    std::vector<std::string> pending_scanned_devices_;
+    std::vector<std::string> pending_host_devices_;
     bool needs_update_ = false;
 
 public:

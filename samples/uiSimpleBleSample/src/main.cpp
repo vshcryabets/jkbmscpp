@@ -4,6 +4,8 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 
 #include "app.h"
+#include "BleRepoSimpleBleImpl.h"
+#include "GetAdaptersUseCase.h"
 
 void init_logger() {
     try {
@@ -23,7 +25,11 @@ void init_logger() {
 
 int main() {
     init_logger();
-    ViewModel viewModel;
+    
+    auto bleRepo = std::make_unique<BleRepoSimpleBleImpl>();
+    auto getAdaptersUseCase = std::make_unique<GetAdaptersUseCaseImpl>(*bleRepo);
+    
+    ViewModel viewModel(*getAdaptersUseCase);
     App app(viewModel);
     app.run();
     return 0;
