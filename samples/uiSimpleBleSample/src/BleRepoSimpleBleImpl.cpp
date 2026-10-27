@@ -1,7 +1,8 @@
 #include "BleRepoSimpleBleImpl.h"
 #include <iostream>
+#include <spdlog/spdlog.h>
 
-BleRepoSimpleBleImpl::BleRepoSimpleBleImpl() {
+BleRepoSimpleBleImpl::BleRepoSimpleBleImpl(int scanIntervalMs) : scanIntervalMs(scanIntervalMs) {
     try {
         adapters = SimpleBLE::Adapter::get_adapters();
         // Cache all adapters with their IDs
@@ -9,8 +10,19 @@ BleRepoSimpleBleImpl::BleRepoSimpleBleImpl() {
             adapterCache[nextAdapterId++] = adapter;
         }
         nextAdapterId = 0;  // Reset for getAdapters() to return consistent IDs
+        
+        // Start worker thread
+        workerRunning = true;
+        scanWorkerThread = std::thread(&BleRepoSimpleBleImpl::scanWorker, this);
     } catch (const std::exception& e) {
         std::cerr << "Error getting BLE adapters: " << e.what() << std::endl;
+    }
+}
+
+BleRepoSimpleBleImpl::~BleRepoSimpleBleImpl() {
+    workerRunning = false;
+    if (scanWorkerThread.joinable()) {
+        scanWorkerThread.join();
     }
 }
 
@@ -47,7 +59,21 @@ void BleRepoSimpleBleImpl::startScan(BleAdapterId adapterId) {
     
     try {
         it->second.scan_start();
-        std::cout << "Started scanning on adapter " << adapterId << std::endl;
+        spdlog::info("Started scanning on adapter {}", adapterId);
+        
+        // Create StateFlow for this adapter if it doesn't exist
+        {
+            std::lock_guard<std::mutex> lock(scanFlowsLock);
+            if (scanFlows.find(adapterId) == scanFlows.end()) {
+                scanFlows.emplace(adapterId, std::vector<Peripheral>{});
+            }
+        }
+        
+        // Add to active scans
+        {
+            std::lock_guard<std::mutex> lock(activeScansLock);
+            activeScans.insert(adapterId);
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error starting scan: " << e.what() << std::endl;
     }
@@ -62,47 +88,106 @@ void BleRepoSimpleBleImpl::stopScan(BleAdapterId adapterId) {
     
     try {
         it->second.scan_stop();
-        std::cout << "Stopped scanning on adapter " << adapterId << std::endl;
+        spdlog::info("Stopped scanning on adapter {}", adapterId);
+        
+        // Remove from active scans
+        {
+            std::lock_guard<std::mutex> lock(activeScansLock);
+            activeScans.erase(adapterId);
+        }
+        
+        // Remove StateFlow for this adapter
+        {
+            std::lock_guard<std::mutex> lock(scanFlowsLock);
+            scanFlows.erase(adapterId);
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error stopping scan: " << e.what() << std::endl;
     }
 }
 
-std::string BleRepoSimpleBleImpl::getPeripheralName(PeripheralId peripheralId) {
-    auto it = peripheralCache.find(peripheralId);
-    if (it == peripheralCache.end()) {
-        return "";
-    }
-    return it->second.identifier();
-}
-
-std::string BleRepoSimpleBleImpl::getPeripheralIdentifier(PeripheralId peripheralId) {
-    auto it = peripheralCache.find(peripheralId);
-    if (it == peripheralCache.end()) {
-        return "";
-    }
-    return it->second.address();
-}
-
-std::vector<PeripheralId> BleRepoSimpleBleImpl::getScanResults() {
-    std::vector<PeripheralId> results;
-    
-    if (adapterCache.empty()) {
-        return results;
-    }
-    
-    try {
-        // Get first adapter from cache
-        auto firstAdapter = adapterCache.begin()->second;
-        auto peripherals_list = firstAdapter.get_peripherals();
-        for (const auto& peripheral : peripherals_list) {
-            PeripheralId id = nextPeripheralId++;
-            peripheralCache[id] = peripheral;
-            results.push_back(id);
+Peripheral BleRepoSimpleBleImpl::getPeripheral(BleAdapterId adapterId, PeripheralId id) {
+    std::lock_guard<std::mutex> lock(scanFlowsLock);
+    auto flowIt = scanFlows.find(adapterId);
+    if (flowIt == scanFlows.end()) {
+        return Peripheral{id, "", 0, ""};
+    } else {
+        auto peripherals = flowIt->second.state();
+        for (const auto& peripheral : peripherals) {
+            if (peripheral.id == id) {
+                return peripheral;
+            }
         }
-    } catch (const std::exception& e) {
-        std::cerr << "Error getting scan results: " << e.what() << std::endl;
+        return Peripheral{id, "", 0, ""};
     }
+}
+
+std::vector<Peripheral> BleRepoSimpleBleImpl::getScanResults(BleAdapterId adapterId) {
+    std::lock_guard<std::mutex> lock(scanFlowsLock);
+    auto flowIt = scanFlows.find(adapterId);
+    if (flowIt == scanFlows.end()) {
+        return {};
+    } else {
+        return flowIt->second.state();
+    }
+}
+
+flow::StateFlow<std::vector<Peripheral>>& BleRepoSimpleBleImpl::getScanFlow(BleAdapterId adapterId) {
+    std::lock_guard<std::mutex> lock(scanFlowsLock);
+    auto it = scanFlows.find(adapterId);
+    if (it == scanFlows.end()) {
+        scanFlows.emplace(adapterId, std::vector<Peripheral>{});
+        it = scanFlows.find(adapterId);
+    }
+    return it->second;
+}
+
+void BleRepoSimpleBleImpl::scanWorker() {
+    while (workerRunning) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(scanIntervalMs.load()));
+        
+        std::set<BleAdapterId> activeAdapters;
+        {
+            std::lock_guard<std::mutex> lock(activeScansLock);
+            activeAdapters = activeScans;
+        }
+        
+        for (BleAdapterId adapterId : activeAdapters) {
+            try {
     
-    return results;
+                auto it = adapterCache.find(adapterId);
+                if (it == adapterCache.end()) {
+                    continue;
+                }
+                std::vector<Peripheral> results;
+
+                try {
+                    auto& adapter = it->second;
+                    PeripheralId id = 1;
+                    auto peripherals_list = adapter.scan_get_results();
+                    for (auto& peripheral : peripherals_list) {
+                        results.push_back( Peripheral{
+                            id++,
+                            peripheral.identifier(),
+                            peripheral.rssi(),
+                            peripheral.address(),
+                            peripheral.address()
+                        });
+                    }
+                } catch (const std::exception& e) {
+                    spdlog::error("Error getting scan results for adapter {}: {}", adapterId, e.what());
+                }
+            
+                {
+                    std::lock_guard<std::mutex> lock(scanFlowsLock);
+                    auto flowIt = scanFlows.find(adapterId);
+                    if (flowIt != scanFlows.end()) {
+                        flowIt->second.emit(results);
+                    }
+                }
+            } catch (const std::exception& e) {
+                spdlog::error("Error scanning adapter {}: {}", adapterId, e.what());
+            }
+        }
+    }
 }

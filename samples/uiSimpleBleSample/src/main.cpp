@@ -6,6 +6,9 @@
 #include "app.h"
 #include "BleRepoSimpleBleImpl.h"
 #include "GetAdaptersUseCase.h"
+#include "StartScanUseCase.h"
+#include "StopScanUseCase.h"
+#include "ObserveScanResultsUseCase.h"
 
 void init_logger() {
     try {
@@ -26,11 +29,14 @@ void init_logger() {
 int main() {
     init_logger();
     
-    auto bleRepo = std::make_unique<BleRepoSimpleBleImpl>();
-    auto getAdaptersUseCase = std::make_unique<GetAdaptersUseCaseImpl>(*bleRepo);
-    
-    ViewModel viewModel(*getAdaptersUseCase);
-    App app(viewModel);
+    BleRepoSimpleBleImpl bleRepo;
+    auto getAdaptersUseCase = std::make_unique<GetAdaptersUseCaseImpl>(bleRepo);
+    auto startScanUseCase = std::make_unique<StartScanUseCaseImpl>(bleRepo);
+    auto stopScanUseCase = std::make_unique<StopScanUseCaseImpl>(bleRepo);
+    auto observeScanResultsUseCase = std::make_unique<ObserveScanResultsUseCaseImpl>(bleRepo);
+
+    uiSimpleBleSample::ViewModel viewModel(*getAdaptersUseCase, *startScanUseCase, *stopScanUseCase, *observeScanResultsUseCase);
+    uiSimpleBleSample::App app(viewModel);
     app.run();
     return 0;
 }

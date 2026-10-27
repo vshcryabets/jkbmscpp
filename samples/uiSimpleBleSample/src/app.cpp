@@ -8,8 +8,7 @@
 
 using namespace ftxui;
 
-using namespace ftxui;
-
+namespace uiSimpleBleSample {
 
 App::App(ViewModel &viewModel) : 
     viewModel_(viewModel), 
@@ -24,33 +23,62 @@ App::~App() {
 }
 
 void App::run() {
-    // 2. Create the Menu Component
-    MenuOption option;
-    option.on_enter = [&] {
-        if (menu_selected_ >= 0 && menu_selected_ < static_cast<int>(scanned_devices_.size()) &&
-            scanned_devices_[menu_selected_] == "Quit")
-        {
-            viewModel_.onUiAction(ExitAppEvent{});
-            screen_.Exit();
+    // host devcies
+    MenuOption hostDeviceOptions;
+    hostDeviceOptions.on_enter = [&] {
+        if (host_device_selected_ == (host_devices_.size() - 1)) {
+            viewModel_.onUiAction(HostDeviceQuitClicked{});
+        } else {
+            viewModel_.onUiAction(OnHostDeviceSelected(host_device_selected_));
+            spdlog::info("Selected host device: {}", host_devices_[host_device_selected_]);
         }
     };
-    auto menu = Menu(&scanned_devices_, &menu_selected_, option);
+    auto hostDevicesMenu = Menu(&host_devices_, &host_device_selected_, hostDeviceOptions);
+    // scanned devices
+    MenuOption scanDeviceOptions;
+    scanDeviceOptions.on_enter = [&] {
+        if (scan_device_selected_ == (scanned_devices_.size() - 1)) {
+            viewModel_.onUiAction(ScanDeviceQuitClicked{});
+        } else {
+            // Handle scanned device selection
+            spdlog::info("Selected scanned device: {}", scanned_devices_[scan_device_selected_]);
+        }
+    };
+    auto scanDevicesMenu = Menu(&scanned_devices_, &scan_device_selected_, scanDeviceOptions);
 
-    auto layout = Renderer(menu, [&, menu] {
+    auto layout = Renderer(Container::Horizontal({hostDevicesMenu, scanDevicesMenu}), 
+    [&, hostDevicesMenu, scanDevicesMenu] {
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
             if (needs_update_) {
-                scanned_devices_ = pending_scanned_devices_;
-                // Fix cursor postiotion
-                if (menu_selected_ >= static_cast<int>(scanned_devices_.size())) {
-                    menu_selected_ = scanned_devices_.empty() ? 0 : static_cast<int>(scanned_devices_.size()) - 1;
+                host_devices_ = pending_state_->bleHostDevices.value_or(host_devices_);
+                host_devices_.push_back("Quit");
+                if (host_device_selected_ >= host_devices_.size()) {
+                    host_device_selected_ = host_devices_.empty() ? 0 : host_devices_.size() - 1;
+                }
+                scanned_devices_ = pending_state_->scannedDevices.value_or(scanned_devices_);
+                scanned_devices_.push_back("Quit");
+                if (scan_device_selected_ >= scanned_devices_.size()) {
+                    scan_device_selected_ = scanned_devices_.empty() ? 0 : scanned_devices_.size() - 1;
                 }
                 needs_update_ = false;
+            }
+            if (pending_state_->needToCloseApp.value_or(false)) {
+                screen_.Exit();
+            }
+            switch (pending_state_->currentScreen.value_or(uiSimpleBleSample::Screen::SELECT_HOST_DEVICE)) {
+                case uiSimpleBleSample::Screen::SELECT_HOST_DEVICE:
+                    hostDevicesMenu->TakeFocus();
+                    break;
+                case uiSimpleBleSample::Screen::SELECT_TARGET_DEVICE:
+                    scanDevicesMenu->TakeFocus();
+                    break;
             }
         }
 
         return hbox({
-            window(text(" Menu "), menu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32)
+            window(text(" Host "), hostDevicesMenu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32),
+            window(text(" Scanned "), scanDevicesMenu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32)
         });
     });
 
@@ -61,18 +89,14 @@ void App::run() {
 
 void App::on_state_changed(const std::shared_ptr<ViewState>& state) {
     spdlog::info("App::on_state_changed: state changed, updating menu entries");
-    std::vector<std::string> next_entries;
-
-    if (state && state->scannedDevices.has_value()) {
-        next_entries = state->scannedDevices.value();
-    }
-    next_entries.push_back("Quit");
 
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
-        pending_scanned_devices_ = std::move(next_entries);
+        pending_state_ = state;
         needs_update_ = true;
     }
 
     screen_.PostEvent(ftxui::Event::Custom);    
+}
+
 }

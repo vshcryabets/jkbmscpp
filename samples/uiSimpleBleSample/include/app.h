@@ -11,6 +11,8 @@
 
 #include "viewmodel.h"
 
+namespace uiSimpleBleSample {
+
 class App: public flow::StateListener<std::shared_ptr<ViewState>> {
 private:
     ViewModel &viewModel_;
@@ -18,14 +20,14 @@ private:
 
 
     // UI only thread data
-    int menu_selected_ = 0;
+    int host_device_selected_ = 0;
+    int scan_device_selected_ = 0;
     std::vector<std::string> scanned_devices_;
     std::vector<std::string> host_devices_;
 
     // callback data
     std::mutex state_mutex_;
-    std::vector<std::string> pending_scanned_devices_;
-    std::vector<std::string> pending_host_devices_;
+    std::shared_ptr<ViewState> pending_state_;
     bool needs_update_ = false;
 
 public:
@@ -34,3 +36,5 @@ public:
     void run();
     void on_state_changed(const std::shared_ptr<ViewState>& state) override;
 };
+
+}

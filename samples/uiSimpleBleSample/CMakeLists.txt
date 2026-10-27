@@ -3,6 +3,7 @@ add_executable(uiSimpleBleSample
     src/JkBmsSourceSimpleBleImpl.cpp
     src/viewmodel.cpp
     src/app.cpp
+    src/BleRepoSimpleBleImpl.cpp
 )
 
 include(FetchContent)

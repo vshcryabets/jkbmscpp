@@ -65,6 +65,24 @@ namespace flow {
                 storage_->listeners.end());
         }
 
+        void emit(const StateType& new_state)
+        {
+            bool has_changes = false;
+            {
+                std::lock_guard lock(storage_->state_mutex);
+                if (new_state != storage_->state)
+                {
+                    storage_->state = new_state;
+                    has_changes = true;
+                }
+            }
+
+            if (has_changes)
+            {
+                notify_state_changed(new_state);
+            }
+        }
+
         template <typename Updater>
         bool update(Updater&& updater)
         {

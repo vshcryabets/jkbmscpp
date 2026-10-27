@@ -4,11 +4,16 @@
 #include <iomanip>
 #include <sstream>
 
-ViewModel::ViewModel(GetAdaptersUseCase& useCase) 
+namespace uiSimpleBleSample {
+
+ViewModel::ViewModel(GetAdaptersUseCase& useCase, StartScanUseCase& scanUseCase, StopScanUseCase& stopScanUseCaseArg, ObserveScanResultsUseCase& observeUseCase) 
     : getAdaptersUseCase(useCase),
+      startScanUseCase(scanUseCase),
+      stopScanUseCase(stopScanUseCaseArg),
+      observeScanResultsUseCase(observeUseCase),
       stateFlow(
         std::make_shared<ViewState>(ViewState{
-        .currentScreen = Screen::DEVICE_LIST,
+        .currentScreen = Screen::SELECT_HOST_DEVICE,
         .bleHostDevices = std::vector<std::string>{},
         .scannedDevices = std::vector<std::string>{"a", "b", "c"}
 })) {
@@ -17,14 +22,14 @@ ViewModel::ViewModel(GetAdaptersUseCase& useCase)
 void ViewModel::onUiAction(const UiEvent& event) {
     if (const auto* renderStarted = dynamic_cast<const RenderStarted*>(&event)) {
         (void)renderStarted;
-        auto results = getAdaptersUseCase.get();
+        adapterResults = getAdaptersUseCase.get();
         
         std::vector<std::string> adapterNames;
-        for (const auto& result : results) {
+        for (const auto& result : adapterResults) {
             adapterNames.push_back(result.name);
         }
         
-        bool showDevices = results.size() != 1;
+        bool showDevices = adapterResults.size() != 1;
         
         stateFlow.update([&adapterNames, showDevices](const auto& currentState) {
             auto newState = currentState->copy(ViewState{
@@ -33,5 +38,66 @@ void ViewModel::onUiAction(const UiEvent& event) {
             });
             return std::make_shared<ViewState>(newState);
         });
+    } else if (const auto* hostDeviceQuitClicked = dynamic_cast<const HostDeviceQuitClicked*>(&event)) {
+        (void)hostDeviceQuitClicked;
+        stateFlow.update([](const auto& currentState) {
+            auto newState = currentState->copy(ViewState{
+                .needToCloseApp = true
+            });
+            return std::make_shared<ViewState>(newState);
+        });
+    } else if (const auto* hostDeviceSelected = dynamic_cast<const OnHostDeviceSelected*>(&event)) {
+        if (hostDeviceSelected->selectedIndex < static_cast<int>(adapterResults.size())) {
+            const auto& selectedAdapter = adapterResults[hostDeviceSelected->selectedIndex];
+            startScanUseCase.start(selectedAdapter.adapterId);
+            
+            // Subscribe to scan results
+            auto& scanFlow = observeScanResultsUseCase.observe(selectedAdapter.adapterId);
+            scanFlow.subscribe(this);
+            
+            stateFlow.update([selectedIndex = hostDeviceSelected->selectedIndex](const auto& currentState) {
+                auto newState = currentState->copy(ViewState{
+                    .currentScreen = Screen::SELECT_TARGET_DEVICE,
+                    .activeHostDevice = selectedIndex
+                });
+                return std::make_shared<ViewState>(newState);
+            });
+        }
+    } else if (const auto* scanDeviceQuitClicked = dynamic_cast<const ScanDeviceQuitClicked*>(&event)) {
+        (void)scanDeviceQuitClicked;
+        stateFlow.update([this](const auto& currentState) {
+            if (currentState->activeHostDevice.has_value()) {
+                const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
+                
+                // Unsubscribe from scan results
+                auto& scanFlow = observeScanResultsUseCase.observe(selectedAdapter.adapterId);
+                scanFlow.unsubscribe(this);
+                
+                stopScanUseCase.stop(selectedAdapter.adapterId);
+            }
+            auto newState = currentState->copy(ViewState{
+                .currentScreen = Screen::SELECT_HOST_DEVICE,
+                .scannedDevices = std::vector<std::string>{}
+            });
+            return std::make_shared<ViewState>(newState);
+        });
     }
+}
+
+void ViewModel::on_state_changed(const std::vector<Peripheral>& peripherals) {
+    std::vector<std::string> deviceNames;
+    for (const auto& peripheral : peripherals) {
+        deviceNames.push_back(
+            (peripheral.name.empty() ? "Unknown" : peripheral.name) + 
+                " (" + peripheral.address + ")");
+    }
+    
+    stateFlow.update([&deviceNames](const auto& currentState) {
+        auto newState = currentState->copy(ViewState{
+            .scannedDevices = deviceNames
+        });
+        return std::make_shared<ViewState>(newState);
+    });
+}
+
 }
