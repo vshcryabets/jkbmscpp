@@ -18,10 +18,23 @@ enum class Screen: uint8_t {
     VIEW_BMS_INFORMATION = 3
 };
 
+struct ScannedDevice {
+    std::string name;
+    std::string id;
+    
+    [[nodiscard]] bool operator==(const ScannedDevice& other) const {
+        return name == other.name && id == other.id;
+    }
+    
+    [[nodiscard]] bool operator!=(const ScannedDevice& other) const {
+        return !(*this == other);
+    }
+};
+
 struct ViewState {
     const std::optional<Screen> currentScreen = std::nullopt;
     const std::optional<std::vector<std::string>> bleHostDevices = std::nullopt;
-    const std::optional<std::vector<std::string>> scannedDevices = std::nullopt;
+    const std::optional<std::vector<ScannedDevice>> scannedDevices = std::nullopt;
     const std::optional<bool> showHostDevices = std::nullopt;
     const std::optional<int> activeHostDevice = std::nullopt;
     const std::optional<int> activeScanDevice = std::nullopt;
@@ -70,6 +83,12 @@ class OnHostDeviceSelected : public UiEvent {
 public:
     int selectedIndex;
     explicit OnHostDeviceSelected(int index) : selectedIndex(index) {}
+};
+
+class OnScannedDeviceSelected : public UiEvent {
+public:
+    std::string deviceId;
+    explicit OnScannedDeviceSelected(const std::string& id) : deviceId(id) {}
 };
 
 class RenderStarted : public UiEvent {};

@@ -3,6 +3,8 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
+#include <spdlog/spdlog.h>
 
 namespace uiSimpleBleSample {
 
@@ -15,7 +17,7 @@ ViewModel::ViewModel(GetAdaptersUseCase& useCase, StartScanUseCase& scanUseCase,
         std::make_shared<ViewState>(ViewState{
         .currentScreen = Screen::SELECT_HOST_DEVICE,
         .bleHostDevices = std::vector<std::string>{},
-        .scannedDevices = std::vector<std::string>{"a", "b", "c"}
+        .scannedDevices = std::vector<ScannedDevice>{}
 })) {
 }
 
@@ -77,24 +79,33 @@ void ViewModel::onUiAction(const UiEvent& event) {
             }
             auto newState = currentState->copy(ViewState{
                 .currentScreen = Screen::SELECT_HOST_DEVICE,
-                .scannedDevices = std::vector<std::string>{}
+                .scannedDevices = std::vector<ScannedDevice>{}
             });
             return std::make_shared<ViewState>(newState);
         });
+    } else if (const auto* scannedDeviceSelected = dynamic_cast<const OnScannedDeviceSelected*>(&event)) {
+        spdlog::info("Selected scanned device with ID: {}", scannedDeviceSelected->deviceId);
     }
 }
 
 void ViewModel::on_state_changed(const std::vector<Peripheral>& peripherals) {
-    std::vector<std::string> deviceNames;
+    std::vector<ScannedDevice> scannedDevices;
     for (const auto& peripheral : peripherals) {
-        deviceNames.push_back(
-            (peripheral.name.empty() ? "Unknown" : peripheral.name) + 
-                " (" + peripheral.address + ")");
+        scannedDevices.push_back({
+            .name = (peripheral.name.empty() ? "Unknown" : peripheral.name) + 
+                    " (" + peripheral.address + ")",
+            .id = peripheral.address
+        });
     }
     
-    stateFlow.update([&deviceNames](const auto& currentState) {
+    std::sort(scannedDevices.begin(), scannedDevices.end(), 
+        [](const ScannedDevice& a, const ScannedDevice& b) {
+            return a.name < b.name;
+        });
+    
+    stateFlow.update([&scannedDevices](const auto& currentState) {
         auto newState = currentState->copy(ViewState{
-            .scannedDevices = deviceNames
+            .scannedDevices = scannedDevices
         });
         return std::make_shared<ViewState>(newState);
     });

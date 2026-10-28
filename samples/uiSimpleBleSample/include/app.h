@@ -22,7 +22,8 @@ private:
     // UI only thread data
     int host_device_selected_ = 0;
     int scan_device_selected_ = 0;
-    std::vector<std::string> scanned_devices_;
+    std::vector<ScannedDevice> scanned_devices_;
+    std::vector<std::string> scanned_devices_display_;
     std::vector<std::string> host_devices_;
 
     // callback data
