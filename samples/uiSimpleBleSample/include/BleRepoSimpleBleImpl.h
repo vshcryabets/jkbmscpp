@@ -2,6 +2,7 @@
 
 #include "BleRepo.h"
 #include <simpleble/SimpleBLE.h>
+#include <JkBmsController.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <mutex>
 #include <set>
+#include <memory>
 
 class BleRepoSimpleBleImpl : public BleRepo {
 private:
@@ -25,7 +27,14 @@ private:
     mutable std::mutex activeScansLock;
     mutable std::mutex scanFlowsLock;
     
+    // Connection management
+    std::map<std::pair<BleAdapterId, PeripheralId>, std::shared_ptr<flow::StateFlow<JkbmsState>>> bmsStateFlows;
+    std::map<std::pair<BleAdapterId, PeripheralId>, std::unique_ptr<JkBmsCpp::Controller>> bmsControllers;
+    std::thread connectionWorkerThread;
+    mutable std::mutex connectionFlowsLock;
+    
     void scanWorker();
+    void connectionWorker();
     
 public:
     BleRepoSimpleBleImpl(int scanIntervalMs = 500);
@@ -39,4 +48,8 @@ public:
     virtual Peripheral getPeripheral(BleAdapterId adapterId, PeripheralId id) override;
     virtual std::vector<Peripheral> getScanResults(BleAdapterId adapterId) override;
     virtual flow::StateFlow<std::vector<Peripheral>>& getScanFlow(BleAdapterId adapterId) override;
+    
+    virtual void startConnection(BleAdapterId adapterId, PeripheralId peripheralId) override;
+    virtual void stopConnection(BleAdapterId adapterId, PeripheralId peripheralId) override;
+    virtual flow::StateFlow<JkbmsState>* getBmsState(BleAdapterId adapterId, PeripheralId peripheralId) override;
 };

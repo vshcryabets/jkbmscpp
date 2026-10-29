@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <type_traits>
+#include <functional>
 
 namespace flow {
 
@@ -50,6 +51,34 @@ namespace flow {
         /// 
         /// @param state The new state value
         virtual void on_state_changed(const T& state) = 0;
+    };
+
+    /// @brief Observer interface for subscription lifecycle events
+    /// 
+    /// UnsubscribeListener provides callbacks for tracking when listeners
+    /// unsubscribe from a StateFlow. Useful for resource cleanup and
+    /// tracking subscription state.
+    /// 
+    /// @tparam T The state type (not used in callbacks, required for template consistency)
+    template <typename T>
+    class UnsubscribeListener {
+    public:
+        /// @brief Virtual destructor for proper cleanup
+        virtual ~UnsubscribeListener() = default;
+
+        /// @brief Called when a listener unsubscribes
+        /// 
+        /// This method is invoked when a StateListener unsubscribes from the StateFlow.
+        /// 
+        /// @param listener Pointer to the listener that unsubscribed
+        virtual void onUnsubscribe(StateListener<T>* listener) = 0;
+
+        /// @brief Called when the last listener unsubscribes
+        /// 
+        /// This method is invoked when the last StateListener is removed from the StateFlow,
+        /// meaning there are no more StateListener subscribers (though there may still be
+        /// lambda-based subscribers).
+        virtual void onLastUnsubscribe() = 0;
     };
 
     /// @brief Thread-safe reactive state container with observer pattern
@@ -119,6 +148,9 @@ namespace flow {
 
             /// @brief List of registered state listeners
             std::vector<StateListener<StateType>*> listeners;
+            
+            /// @brief Unsubscribe listener for lifecycle events
+            UnsubscribeListener<StateType>* unsubscribe_listener = nullptr;
 
             /// @brief Mutex protecting listener list modifications
             mutable std::mutex listeners_mutex;
@@ -131,6 +163,17 @@ namespace flow {
             : storage_(std::make_shared<Storage>())
         {
             storage_->state = initial_state;
+        }
+
+        /// @brief Constructs a StateFlow with an initial state and unsubscribe listener
+        /// 
+        /// @param initial_state The initial state value
+        /// @param unsubscribe_listener Listener for subscription lifecycle events (can be nullptr)
+        StateFlow(const StateType& initial_state, UnsubscribeListener<StateType>* unsubscribe_listener)
+            : storage_(std::make_shared<Storage>())
+        {
+            storage_->state = initial_state;
+            storage_->unsubscribe_listener = unsubscribe_listener;
         }
 
         /// @brief Returns the current state value
@@ -182,13 +225,27 @@ namespace flow {
         /// @param listener Pointer to the listener to unsubscribe
         void unsubscribe(StateListener<StateType>* listener)
         {
-            std::lock_guard lock(storage_->listeners_mutex);
-            storage_->listeners.erase(
-                std::remove_if(storage_->listeners.begin(), storage_->listeners.end(), 
-                [&](const StateListener<StateType>* existing) {
-                    return existing == listener;
-                }),
-                storage_->listeners.end());
+            bool was_last_listener = false;
+            {
+                std::lock_guard lock(storage_->listeners_mutex);
+                storage_->listeners.erase(
+                    std::remove_if(storage_->listeners.begin(), storage_->listeners.end(), 
+                    [&](const StateListener<StateType>* existing) {
+                        return existing == listener;
+                    }),
+                    storage_->listeners.end());
+                
+                // Check if this was the last listener
+                was_last_listener = storage_->listeners.empty();
+            }
+            
+            // Notify unsubscribe listener (outside the lock to avoid deadlocks)
+            if (storage_->unsubscribe_listener) {
+                storage_->unsubscribe_listener->onUnsubscribe(listener);
+                if (was_last_listener) {
+                    storage_->unsubscribe_listener->onLastUnsubscribe();
+                }
+            }
         }
 
         /// @brief Emits a new state and notifies all listeners if it differs from current state
@@ -287,11 +344,13 @@ namespace flow {
         void notify_state_changed(const StateType& snapshot) const
         {
             std::vector<StateListener<StateType>*> listeners_copy;
+            
             {
                 std::lock_guard lock(storage_->listeners_mutex);
                 listeners_copy = storage_->listeners;
             }
 
+            // Notify StateListener subscribers
             for (const auto& listener : listeners_copy)
             {
                 if (listener)

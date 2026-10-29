@@ -37,13 +37,11 @@ void App::run() {
     // scanned devices
     MenuOption scanDeviceOptions;
     scanDeviceOptions.on_enter = [&] {
-        auto displaySize = scanned_devices_display_.size();
-        if (scan_device_selected_ == (displaySize - 1) && 
-            displaySize > 0 && scanned_devices_display_.back() == "Quit") {
+        if (scan_device_selected_ == 0) {
             viewModel_.onUiAction(ScanDeviceQuitClicked{});
-        } else if (scan_device_selected_ < static_cast<int>(scanned_devices_.size())) {
-            viewModel_.onUiAction(OnScannedDeviceSelected(scanned_devices_[scan_device_selected_].id));
-            spdlog::info("Selected scanned device: {}", scanned_devices_[scan_device_selected_].name);
+        } else if (scan_device_selected_ - 1 < static_cast<int>(scanned_devices_.size())) {
+            viewModel_.onUiAction(OnScannedDeviceSelected(scanned_devices_[scan_device_selected_ - 1].id));
+            spdlog::info("Selected scanned device: {}", scanned_devices_[scan_device_selected_ - 1].name);
         }
     };
     auto scanDevicesMenu = Menu(&scanned_devices_display_, &scan_device_selected_, scanDeviceOptions);
@@ -83,18 +81,11 @@ void App::run() {
         }
         
         scanned_devices_display_.clear();
+        if (currentScreen == uiSimpleBleSample::Screen::SELECT_TARGET_DEVICE) {
+            scanned_devices_display_.push_back("Back");
+        }
         for (const auto& device : scanned_devices_) {
             scanned_devices_display_.push_back(device.name);
-        }
-        
-        if (currentScreen == uiSimpleBleSample::Screen::SELECT_TARGET_DEVICE) {
-            if (scanned_devices_display_.empty() || scanned_devices_display_.back() != "Quit") {
-                scanned_devices_display_.push_back("Quit");
-            }
-        } else {
-            if (!scanned_devices_display_.empty() && scanned_devices_display_.back() == "Quit") {
-                scanned_devices_display_.pop_back();
-            }
         }
         
         if (host_device_selected_ >= host_devices_.size() && !host_devices_.empty()) {

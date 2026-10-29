@@ -8,7 +8,11 @@
 
 namespace uiSimpleBleSample {
 
-ViewModel::ViewModel(GetAdaptersUseCase& useCase, StartScanUseCase& scanUseCase, StopScanUseCase& stopScanUseCaseArg, ObserveScanResultsUseCase& observeUseCase) 
+ViewModel::ViewModel(
+    GetAdaptersUseCase& useCase, 
+    StartScanUseCase& scanUseCase, 
+    StopScanUseCase& stopScanUseCaseArg, 
+    ObserveScanResultsUseCase& observeUseCase) 
     : getAdaptersUseCase(useCase),
       startScanUseCase(scanUseCase),
       stopScanUseCase(stopScanUseCaseArg),
@@ -93,8 +97,8 @@ void ViewModel::on_state_changed(const std::vector<Peripheral>& peripherals) {
     for (const auto& peripheral : peripherals) {
         scannedDevices.push_back({
             .name = (peripheral.name.empty() ? "Unknown" : peripheral.name) + 
-                    " (" + peripheral.address + ")",
-            .id = peripheral.address
+                    " (" + peripheral.id + ")",
+            .id = peripheral.id
         });
     }
     
