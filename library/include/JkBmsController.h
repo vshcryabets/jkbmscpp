@@ -6,14 +6,15 @@
 
 #include "JkBmsFrames.h"
 #include "CppWrappers.h"
+#include "CFunctions.h"
 
 namespace JkBmsCpp {
 
-    typedef std::future<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoFuture;
-    typedef std::promise<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoPromise;
+    typedef std::future<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoFuture;
+    typedef std::promise<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoPromise;
 
-    typedef std::future<Expected<CellInfoResponse, ControllerError>> CellInfoFuture;
-    typedef std::promise<Expected<CellInfoResponse, ControllerError>> CellInfoPromise;
+    typedef std::future<Expected<CellInfoResponse, ControllerError_C>> CellInfoFuture;
+    typedef std::promise<Expected<CellInfoResponse, ControllerError_C>> CellInfoPromise;
 
     class Source {
     public:
@@ -24,21 +25,21 @@ namespace JkBmsCpp {
         virtual SourceError disconnect() = 0;
         /** Send a command to the source */
         virtual SourceError sendCommand(
-            const JkBmsDataBuffer& command,
-            const JkBmsString& service_uuid,
-            const JkBmsString& char_uuid
+            const JkBmsDataBuffer_C command,
+            const UuidStr service_uuid,
+            const UuidStr char_uuid
         ) = 0;
         /** Subscribe to a characteristic */
         virtual SourceError subscribe(
-            const JkBmsString& service_uuid,
-            const JkBmsString& char_uuid,
+            const UuidStr service_uuid,
+            const UuidStr char_uuid,
             void* context,
-            void(*callback)(void* context, const JkBmsDataBuffer &data)
+            void(*callback)(void* context, const JkBmsDataBuffer_C data)
         ) = 0;
         /** Unsubscribe from a characteristic */
         virtual SourceError unsubscribe(
-            const JkBmsString& service_uuid,
-            const JkBmsString& char_uuid
+            const UuidStr service_uuid,
+            const UuidStr char_uuid
         ) = 0;
         /** Get the MTU size of the source */
         virtual size_t getMtu() = 0;
@@ -47,12 +48,13 @@ namespace JkBmsCpp {
     class Controller
     {
     public:
-        const static JkBmsString SERVICE_UUID;
-        const static JkBmsString CHARACTERISTIC_UUID;
+        static UuidStr SERVICE_UUID;
+        static UuidStr CHARACTERISTIC_UUID;
         constexpr static size_t MAX_PACKET_SIZE = 320;
         constexpr static size_t DEFAULT_PACKET_SIZE = 300;
     private:
         Source* source;
+        Log& log;
         // TODO use JkBmsBuffer
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
@@ -60,15 +62,17 @@ namespace JkBmsCpp {
 
         static void notificationCallback(
             void* ctx,
-           const JkBmsDataBuffer &data);
-        void handleResponse(const JkBmsDataBuffer &data);
+           const JkBmsDataBuffer_C data);
+        void handleResponse(const JkBmsDataBuffer_C data);
     public:
-        Controller();
+        Controller(Log& logger = (Log&)dumpLogInstance);
         virtual void start(Source* source);
         virtual void end();
         ~Controller();
         virtual DeviceInfoFuture readDeviceState();
         virtual CellInfoFuture readCellsState();
+    private:
+        static DumpLog dumpLogInstance;
     };
 
 };

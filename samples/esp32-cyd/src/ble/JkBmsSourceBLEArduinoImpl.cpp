@@ -10,72 +10,70 @@ JkBmsSourceBLEArduinoImpl::~JkBmsSourceBLEArduinoImpl() {
     disconnect();
 }
 
-JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::connect() {
+SourceError JkBmsSourceBLEArduinoImpl::connect() {
     if (client->isConnected()) {
-        return JkBmsCpp::SourceError::ALREADY_CONNECTED;
+        return SOURCE_ERROR_ALREADY_CONNECTED;
     }
-    return client->connect(BLEAddress(address)) ? JkBmsCpp::SourceError::SUCCESS : JkBmsCpp::SourceError::FAILURE;
+    return client->connect(BLEAddress(address)) ? SOURCE_ERROR_SUCCESS : SOURCE_ERROR_FAILURE;
 }
 
-JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::disconnect() {
+SourceError JkBmsSourceBLEArduinoImpl::disconnect() {
     if (!client->isConnected()) {
-        return JkBmsCpp::SourceError::NOT_CONNECTED;
+        return SOURCE_ERROR_NOT_CONNECTED;
     }
     client->disconnect();
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::sendCommand(
-    const JkBmsCpp::JkBmsDataBuffer& command,
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid
+SourceError JkBmsSourceBLEArduinoImpl::sendCommand(
+    const JkBmsCpp::JkBmsDataBuffer_C command,
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid
 ) {
     client->setValue(
-        // BLEUUID(service_uuid.data, service_uuid.length, true),
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid.data)),
-            service_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid)),
+            36, 
             true
         ),
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid.data)),
-            char_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid)),
+            36, 
             true
         ),
-        // BLEUUID(char_uuid.data, char_uuid.length, true), 
         std::string(
-            (char*)command.data(), 
-            command.size()
+            (char*)command.ptr, 
+            command.len
         )
     );
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::subscribe(
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid,
+SourceError JkBmsSourceBLEArduinoImpl::subscribe(
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer &data)
+    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
 ) {
     BLERemoteService* service = client->getService(
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid.data)),
-            service_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid)),
+            36, 
             true
         )
     );
     if (service == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_SERVICE;
+        return SOURCE_ERROR_NO_SUCH_SERVICE;
     }
     BLERemoteCharacteristic* characteristic = service->getCharacteristic(
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid.data)),
-            char_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid)),
+            36, 
             true
         )
     );
     if (characteristic == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_CHARACTERISTIC;
+        return SOURCE_ERROR_NO_SUCH_CHARACTERISTIC;
     }
     characteristic->registerForNotify(
         [context, callback](
@@ -83,39 +81,39 @@ JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::subscribe(
             uint8_t* pData, 
             size_t length, 
             bool isNotify) {
-            JkBmsCpp::JkBmsDataBuffer dataBuffer(pData, length);
+            JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {pData, (uint16_t)length};
             callback(context, dataBuffer);
         }
     );
-    return JkBmsCpp::SourceError::SUCCESS;
+    return SOURCE_ERROR_SUCCESS;
 }
 
-JkBmsCpp::SourceError JkBmsSourceBLEArduinoImpl::unsubscribe(
-    const JkBmsCpp::JkBmsString& service_uuid,
-    const JkBmsCpp::JkBmsString& char_uuid
+SourceError JkBmsSourceBLEArduinoImpl::unsubscribe(
+    const JkBmsCpp::UuidStr service_uuid,
+    const JkBmsCpp::UuidStr char_uuid
 ) {
     BLERemoteService* service = client->getService(
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid.data)),
-            service_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(service_uuid)),
+            36, 
             true
         )
     );
     if (service == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_SERVICE;
+        return SOURCE_ERROR_NO_SUCH_SERVICE;
     }
     BLERemoteCharacteristic* characteristic = service->getCharacteristic(
         BLEUUID(
-            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid.data)), 
-            char_uuid.length, 
+            const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(char_uuid)), 
+            36, 
             true
         )
     );
     if (characteristic == nullptr) {
-        return JkBmsCpp::SourceError::NO_SUCH_CHARACTERISTIC;
+        return SOURCE_ERROR_NO_SUCH_CHARACTERISTIC;
     }
     characteristic->registerForNotify(nullptr);
-    return JkBmsCpp::SourceError::SUCCESS; 
+    return SOURCE_ERROR_SUCCESS; 
 }
 
 void JkBmsSourceBLEArduinoImpl::setAddress(uint8_t address[6]) {

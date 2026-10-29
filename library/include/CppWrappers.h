@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include "CFunctions.h"
 
 #ifdef JKBMSCPP_USE_STD_STRING
 #include <string>
@@ -38,7 +39,7 @@ namespace JkBmsCpp {
             }
             Expected& operator=(const Expected& other) = delete;
             Expected& operator=(Expected&& other) = delete;
-            bool hasValue() const { return _has_value; }
+            bool has_value() const { return _has_value; }
             const T& value() const { return _value; }
             const E& error() const { return _error; }
             ~Expected() {
@@ -80,16 +81,21 @@ namespace JkBmsCpp {
 #endif
 
     typedef std::vector<uint8_t> JkBmsByteBuffer;
+    
+    typedef ::JkBmsDataBuffer_C JkBmsDataBuffer_C;
+    typedef ::UuidStr UuidStr;
 
-    class JkBmsDataBuffer {
-        private:
-            uint8_t* _data;
-            uint16_t _size;
-        public:
-            JkBmsDataBuffer(uint8_t* data, uint16_t size)
-                : _data(data), _size(size) {}
-            ~JkBmsDataBuffer() = default;
-            uint8_t* data() const { return _data; }
-            uint16_t size() const { return _size; }            
+    class Log {
+    public:
+        virtual ~Log() = default;
+        virtual void info(const char* format, ...) = 0;
+        virtual void error(const char* format, ...) = 0;
+    };
+
+    class DumpLog : public Log {
+    public:
+        virtual ~DumpLog() = default;
+        virtual void info(const char* format, ...) override {}
+        virtual void error(const char* format, ...) override {}
     };
 }

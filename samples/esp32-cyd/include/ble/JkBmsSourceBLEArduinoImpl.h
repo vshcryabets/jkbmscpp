@@ -8,23 +8,23 @@ class JkBmsSourceDummyImpl : public JkBmsCpp::Source {
     public:
         JkBmsSourceDummyImpl() = default;
         ~JkBmsSourceDummyImpl() override = default;
-        JkBmsCpp::SourceError connect() override { return JkBmsCpp::SourceError::SUCCESS; }
-        JkBmsCpp::SourceError disconnect() override { return JkBmsCpp::SourceError::SUCCESS; }
-        JkBmsCpp::SourceError sendCommand(
-            const JkBmsCpp::JkBmsDataBuffer& command,
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid
-        ) override { return JkBmsCpp::SourceError::SUCCESS; }
-        JkBmsCpp::SourceError subscribe(
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid,
+        SourceError connect() override { return SOURCE_ERROR_SUCCESS; }
+        SourceError disconnect() override { return SOURCE_ERROR_SUCCESS; }
+        SourceError sendCommand(
+            const JkBmsCpp::JkBmsDataBuffer_C command,
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid
+        ) override { return SOURCE_ERROR_SUCCESS; }
+        SourceError subscribe(
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid,
             void* context,
-            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer &data)
-        ) override { return JkBmsCpp::SourceError::SUCCESS; }
-        JkBmsCpp::SourceError unsubscribe(
-            const JkBmsCpp::JkBmsString& service_uuid,
-            const JkBmsCpp::JkBmsString& char_uuid
-        ) override { return JkBmsCpp::SourceError::SUCCESS; }
+            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
+        ) override { return SOURCE_ERROR_SUCCESS; }
+        SourceError unsubscribe(
+            const JkBmsCpp::UuidStr service_uuid,
+            const JkBmsCpp::UuidStr char_uuid
+        ) override { return SOURCE_ERROR_SUCCESS; }
         size_t getMtu() override { return 23; }
 };
 
@@ -36,22 +36,22 @@ private:
 public:
     JkBmsSourceBLEArduinoImpl();
     ~JkBmsSourceBLEArduinoImpl() override;
-    JkBmsCpp::SourceError connect() override;
-    JkBmsCpp::SourceError disconnect() override;
-    JkBmsCpp::SourceError sendCommand(
-        const JkBmsCpp::JkBmsDataBuffer& command,
-        const JkBmsCpp::JkBmsString& service_uuid,
-        const JkBmsCpp::JkBmsString& char_uuid
+    SourceError connect() override;
+    SourceError disconnect() override;
+    SourceError sendCommand(
+        const JkBmsCpp::JkBmsDataBuffer_C command,
+        const JkBmsCpp::UuidStr service_uuid,
+        const JkBmsCpp::UuidStr char_uuid
     ) override;
-    JkBmsCpp::SourceError subscribe(
-        const JkBmsCpp::JkBmsString& service_uuid,
-        const JkBmsCpp::JkBmsString& char_uuid,
+    SourceError subscribe(
+        const JkBmsCpp::UuidStr service_uuid,
+        const JkBmsCpp::UuidStr char_uuid,
         void* context,
-        void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer &data)
+        void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
     ) override;
-    JkBmsCpp::SourceError unsubscribe(
-        const JkBmsCpp::JkBmsString& service_uuid,
-        const JkBmsCpp::JkBmsString& char_uuid
+    SourceError unsubscribe(
+        const JkBmsCpp::UuidStr service_uuid,
+        const JkBmsCpp::UuidStr char_uuid
     ) override;
     size_t getMtu() override;
     void setAddress(uint8_t address[6]);
