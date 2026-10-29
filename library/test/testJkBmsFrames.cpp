@@ -152,7 +152,7 @@ TEST_CASE("parseDeviceInfo", "[JkBmsFrames]") {
     JkBmsCpp::JkBmsDataBuffer_C buffer = {(uint8_t*)SAMPLE_DEVICE_INFO_FRAME, 
         sizeof(SAMPLE_DEVICE_INFO_FRAME)};
     auto deviceInfo = JkBmsCpp::parseDeviceInfo(buffer);
-    REQUIRE(deviceInfo.hasValue() == true);
+    REQUIRE(deviceInfo.has_value() == true);
     auto info = deviceInfo.value();
     REQUIRE(info.vendorId == "JK_BD6A20S10P");
     REQUIRE(info.hwVersion == "11.XW");
@@ -169,7 +169,7 @@ TEST_CASE("parseCellsInfo", "[JkBmsFrames]") {
     JkBmsCpp::JkBmsDataBuffer_C buffer = {(uint8_t*)SAMPLE_CELL_INFO_FRAME, 
         sizeof(SAMPLE_CELL_INFO_FRAME)};
     auto cellsInfo = JkBmsCpp::parseCellsInfo(buffer, CellInfoResponse::CELL_COUNT);
-    REQUIRE(cellsInfo.hasValue() == true);
+    REQUIRE(cellsInfo.has_value() == true);
     auto& info = cellsInfo.value();
     REQUIRE(info.cellVoltages_mV[0] == 3327);
     REQUIRE(info.cellVoltages_mV[1] == 3327);
@@ -245,7 +245,6 @@ TEST_CASE("prepareCommandBuffer", "[JkBmsFrames]") {
     REQUIRE(byteBuffer[16] == 0x00);
     REQUIRE(byteBuffer[17] == 0x00);
     REQUIRE(byteBuffer[18] == 0x00);
-    std::cout << "Calculated CRC: " << std::hex << (int)byteBuffer[19] << std::dec << std::endl;    
     REQUIRE(byteBuffer[19] == 0xca); // checksum
 }
 
@@ -256,7 +255,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE(result.hasValue());
+        REQUIRE(result.has_value());
         REQUIRE(result.value() == ResponseType::CELL_INFO);
     }
     
@@ -265,7 +264,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE(result.hasValue());
+        REQUIRE(result.has_value());
         REQUIRE(result.value() == ResponseType::DEVICE_INFO);
     }
     
@@ -274,7 +273,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE(result.hasValue());
+        REQUIRE(result.has_value());
         REQUIRE(result.value() == ResponseType::SETTINGS);
     }
     
@@ -283,7 +282,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE_FALSE(result.hasValue());
+        REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_MAGIC_BYTES);
     }
     
@@ -292,7 +291,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE_FALSE(result.hasValue());
+        REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_MAGIC_BYTES);
     }
     
@@ -301,7 +300,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE_FALSE(result.hasValue());
+        REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
     
@@ -310,7 +309,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE_FALSE(result.hasValue());
+        REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
     
@@ -319,7 +318,7 @@ TEST_CASE("getResponseType tests", "[JkBmsFrames]") {
         JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {(uint8_t*)buffer.data(), (uint16_t)buffer.size()};
         
         auto result = getResponseType(dataBuffer);
-        REQUIRE_FALSE(result.hasValue());
+        REQUIRE_FALSE(result.has_value());
         REQUIRE(result.error() == CONTROLLER_ERROR_INVALID_RESPONSE_TYPE);
     }
 }

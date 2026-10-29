@@ -3,6 +3,7 @@
 #include "BleRepo.h"
 #include <simpleble/SimpleBLE.h>
 #include <JkBmsController.h>
+#include "JkBmsSourceSimpleBleImpl.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -30,8 +31,12 @@ private:
     // Connection management
     std::map<std::pair<BleAdapterId, PeripheralId>, std::shared_ptr<flow::StateFlow<JkbmsState>>> bmsStateFlows;
     std::map<std::pair<BleAdapterId, PeripheralId>, std::unique_ptr<JkBmsCpp::Controller>> bmsControllers;
+    std::map<std::pair<BleAdapterId, PeripheralId>, std::unique_ptr<JkBmsCpp::Source>> bmsSources;
+    std::map<std::pair<BleAdapterId, PeripheralId>, bool> deviceInfoRequested;
     std::thread connectionWorkerThread;
     mutable std::mutex connectionFlowsLock;
+    
+    JkBmsCpp::DumpLog dumpLog;
     
     void scanWorker();
     void connectionWorker();

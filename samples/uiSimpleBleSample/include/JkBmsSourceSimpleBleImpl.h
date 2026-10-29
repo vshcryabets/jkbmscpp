@@ -6,8 +6,9 @@
 class JkBmsSourceSimpleBleImpl : public JkBmsCpp::Source {
     private:
         SimpleBLE::Peripheral peripheral;
+        JkBmsCpp::Log& log;
     public:
-        JkBmsSourceSimpleBleImpl(const SimpleBLE::Peripheral &peripheral);
+        JkBmsSourceSimpleBleImpl(const SimpleBLE::Peripheral &peripheral, JkBmsCpp::Log& logger);
         virtual ~JkBmsSourceSimpleBleImpl();
 
         virtual SourceError connect() override;

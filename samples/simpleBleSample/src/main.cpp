@@ -2,9 +2,31 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cstdarg>
 
 #include "JkBmsSourceSimpleBleImpl.h"
 #include "JkBmsController.h"
+
+class ConsoleLog : public JkBmsCpp::Log {
+public:
+    virtual void info(const char* format, ...) override {
+        va_list args;
+        va_start(args, format);
+        std::cout << "[INFO] ";
+        vprintf(format, args);
+        std::cout << std::endl;
+        va_end(args);
+    }
+    
+    virtual void error(const char* format, ...) override {
+        va_list args;
+        va_start(args, format);
+        std::cerr << "[ERROR] ";
+        vprintf(format, args);
+        std::cerr << std::endl;
+        va_end(args);
+    }
+};
 
 int main() {
     std::cout << "SimpleBLE Test Starting..." << std::endl;
@@ -69,8 +91,9 @@ int main() {
         auto& selected_peripheral = peripherals[choice - 1];
         std::cout << "Connecting to " << selected_peripheral.identifier() << "..." << std::endl;
 
-        JkBmsSourceSimpleBleImpl source(selected_peripheral);
-        JkBmsCpp::Controller controller;
+        ConsoleLog consoleLog;
+        JkBmsSourceSimpleBleImpl source(selected_peripheral, consoleLog);
+        JkBmsCpp::Controller controller(consoleLog);
         
         controller.start(&source);
 
@@ -78,7 +101,7 @@ int main() {
             std::cout << "Connected! Staying connected for 15 seconds..." << std::endl;
             auto deviceInfo = controller.readDeviceState().get();
 
-            if (!deviceInfo.hasValue()) {
+            if (!deviceInfo.has_value()) {
                 std::cerr << "Error parsing device info: "
                     << static_cast<uint8_t>(deviceInfo.error()) << std::endl;
                 break;

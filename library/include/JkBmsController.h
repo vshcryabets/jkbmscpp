@@ -54,6 +54,7 @@ namespace JkBmsCpp {
         constexpr static size_t DEFAULT_PACKET_SIZE = 300;
     private:
         Source* source;
+        Log& log;
         // TODO use JkBmsBuffer
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
@@ -64,12 +65,14 @@ namespace JkBmsCpp {
            const JkBmsDataBuffer_C data);
         void handleResponse(const JkBmsDataBuffer_C data);
     public:
-        Controller();
+        Controller(Log& logger = (Log&)dumpLogInstance);
         virtual void start(Source* source);
         virtual void end();
         ~Controller();
         virtual DeviceInfoFuture readDeviceState();
         virtual CellInfoFuture readCellsState();
+    private:
+        static DumpLog dumpLogInstance;
     };
 
 };

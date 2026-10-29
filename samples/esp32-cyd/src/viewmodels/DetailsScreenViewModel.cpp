@@ -5,7 +5,8 @@
 DetailsScreenViewModel::DetailsScreenViewModel(
     NavigationController &navigationController)
     : ViewModelAbstract<DetailsScreenState>(),
-      navigationController(navigationController)
+      navigationController(navigationController),
+      jkbmsController(dumpLog)
 {
 }
 

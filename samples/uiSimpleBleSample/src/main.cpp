@@ -5,10 +5,14 @@
 
 #include "app.h"
 #include "BleRepoSimpleBleImpl.h"
+#include "IoExecutor.h"
 #include "GetAdaptersUseCase.h"
 #include "StartScanUseCase.h"
 #include "StopScanUseCase.h"
 #include "ObserveScanResultsUseCase.h"
+#include "StartConnectionUseCase.h"
+#include "StopConnectionUseCase.h"
+#include "ObserveJkbmsStateUseCase.h"
 
 void init_logger() {
     try {
@@ -34,8 +38,13 @@ int main() {
     auto startScanUseCase = std::make_unique<StartScanUseCaseImpl>(bleRepo);
     auto stopScanUseCase = std::make_unique<StopScanUseCaseImpl>(bleRepo);
     auto observeScanResultsUseCase = std::make_unique<ObserveScanResultsUseCaseImpl>(bleRepo);
+    auto startConnectionUseCase = std::make_unique<StartConnectionUseCaseImpl>(bleRepo);
+    auto stopConnectionUseCase = std::make_unique<StopConnectionUseCaseImpl>(bleRepo);
+    auto observeJkbmsStateUseCase = std::make_unique<JkBmsCpp::ObserveJkbmsStateUseCaseImpl>(bleRepo);
+    
+    uiSimpleBleSample::IoExecutor ioExecutor(2);
 
-    uiSimpleBleSample::ViewModel viewModel(*getAdaptersUseCase, *startScanUseCase, *stopScanUseCase, *observeScanResultsUseCase);
+    uiSimpleBleSample::ViewModel viewModel(*getAdaptersUseCase, *startScanUseCase, *stopScanUseCase, *observeScanResultsUseCase, *startConnectionUseCase, *stopConnectionUseCase, *observeJkbmsStateUseCase, ioExecutor);
     uiSimpleBleSample::App app(viewModel);
     app.run();
     return 0;

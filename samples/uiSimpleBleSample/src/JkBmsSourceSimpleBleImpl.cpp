@@ -1,11 +1,10 @@
 #include "JkBmsSourceSimpleBleImpl.h"
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include "JkBmsTools.h"
 
-JkBmsSourceSimpleBleImpl::JkBmsSourceSimpleBleImpl(const SimpleBLE::Peripheral &peripheral)
-    : peripheral(peripheral) {
+JkBmsSourceSimpleBleImpl::JkBmsSourceSimpleBleImpl(const SimpleBLE::Peripheral &peripheral, JkBmsCpp::Log& logger)
+    : peripheral(peripheral), log(logger) {
 }
 
 JkBmsSourceSimpleBleImpl::~JkBmsSourceSimpleBleImpl() {
@@ -17,8 +16,8 @@ SourceError JkBmsSourceSimpleBleImpl::sendCommand(
     const JkBmsCpp::UuidStr service_uuid,
     const JkBmsCpp::UuidStr char_uuid) {
     SimpleBLE::ByteArray command_bytes(command.ptr, command.ptr + command.len);
-    std::cout << "Sending command (" << command.len << " bytes):" << std::endl;
-    JkBmsCpp::dumpDataToLog(command.ptr, command.len);
+    log.info("Sending command (%u bytes):", command.len);
+    JkBmsCpp::dumpDataToLog(command.ptr, command.len, log);
     peripheral.write_request(service_uuid, char_uuid, command_bytes);
     return SOURCE_ERROR_SUCCESS;
 }

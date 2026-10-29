@@ -25,6 +25,7 @@ private:
     std::vector<ScannedDevice> scanned_devices_;
     std::vector<std::string> scanned_devices_display_;
     std::vector<std::string> host_devices_;
+    BmsInfo bmsInfo_storage_;  ///< Persistent storage of last received BMS information
 
     // callback data
     std::mutex state_mutex_;

@@ -39,7 +39,7 @@ namespace JkBmsCpp {
             }
             Expected& operator=(const Expected& other) = delete;
             Expected& operator=(Expected&& other) = delete;
-            bool hasValue() const { return _has_value; }
+            bool has_value() const { return _has_value; }
             const T& value() const { return _value; }
             const E& error() const { return _error; }
             ~Expected() {
@@ -84,4 +84,18 @@ namespace JkBmsCpp {
     
     typedef ::JkBmsDataBuffer_C JkBmsDataBuffer_C;
     typedef ::UuidStr UuidStr;
+
+    class Log {
+    public:
+        virtual ~Log() = default;
+        virtual void info(const char* format, ...) = 0;
+        virtual void error(const char* format, ...) = 0;
+    };
+
+    class DumpLog : public Log {
+    public:
+        virtual ~DumpLog() = default;
+        virtual void info(const char* format, ...) override {}
+        virtual void error(const char* format, ...) override {}
+    };
 }

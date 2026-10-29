@@ -1,6 +1,5 @@
 #include <cstdint>
-#include <iostream>
-#include <iomanip>
+#include <cstdarg>
 
 #include "JkBmsController.h"
 #include "JkBmsTools.h"
@@ -11,7 +10,9 @@ namespace JkBmsCpp
 UuidStr Controller::SERVICE_UUID = {'0','0','0','0','f','f','e','0','-','0','0','0','0','-','1','0','0','0','-','8','0','0','0','-','0','0','8','0','5','f','9','b','3','4','f','b','\0'};
 UuidStr Controller::CHARACTERISTIC_UUID = {'0','0','0','0','f','f','e','1','-','0','0','0','0','-','1','0','0','0','-','8','0','0','0','-','0','0','8','0','5','f','9','b','3','4','f','b','\0'};
 
-Controller::Controller() : source(nullptr)
+DumpLog Controller::dumpLogInstance;
+
+Controller::Controller(Log& logger) : source(nullptr), log(logger)
 {
     responseBuffer.reserve(MAX_PACKET_SIZE);
 }
@@ -46,7 +47,7 @@ void Controller::end()
 CellInfoFuture Controller::readCellsState() {
     pendingCellInfoRequest = std::make_unique<CellInfoPromise>();
     if (source == nullptr) {
-        std::cerr << "Source is not started" << std::endl;
+        log.error("Source is not started");
         pendingCellInfoRequest->set_value(
             Expected<CellInfoResponse, ControllerError_C>(
                 CONTROLLER_ERROR_NO_SOURCE));
@@ -63,7 +64,7 @@ DeviceInfoFuture Controller::readDeviceState()
 {
     pendingDeviceInfoRequest = std::make_unique<DeviceInfoPromise>();
     if (source == nullptr) {
-        std::cerr << "Source is not started" << std::endl;
+        log.error("Source is not started");
         pendingDeviceInfoRequest->set_value(
             Expected<DeviceInfoResponse, ControllerError_C>(
                 CONTROLLER_ERROR_NO_SOURCE));
@@ -84,11 +85,11 @@ void Controller::notificationCallback(
 }
 
 void Controller::handleResponse(const JkBmsDataBuffer_C data) {
-    std::cout << "Received " << data.len << " bytes:" << std::endl;
-    dumpDataToLog(data.ptr, data.len);
+    log.info("Received %u bytes", data.len);
+    dumpDataToLog(data.ptr, data.len, log);
     if (checkFrameStart(data)) {
         // we received new packet, clear previous data
-        std::cout << "New packet detected, clearing buffer" << std::endl;
+        log.info("New packet detected, clearing buffer");
         responseBuffer.clear();
     }
     responseBuffer.insert(responseBuffer.end(), data.ptr, data.ptr + data.len);
@@ -96,16 +97,15 @@ void Controller::handleResponse(const JkBmsDataBuffer_C data) {
         // we have full packet, process it
         JkBmsDataBuffer_C buffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
         if (!checkFrameChecksum(buffer)) {
-            std::cerr << "Checksum mismatch" << std::endl;
+            log.error("Checksum mismatch");
             return;
         }
         auto responseType = getResponseType(buffer);
-        if (!responseType.hasValue()) {
-            std::cerr << "Error getting response type: "
-                << static_cast<uint8_t>(responseType.error()) << std::endl;
+        if (!responseType.has_value()) {
+            log.error("Error getting response type: %d", static_cast<uint8_t>(responseType.error()));
             return;
         } else {
-            std::cout << "Response type: " << (int)responseType.value() << std::endl;
+            log.info("Response type: %d", static_cast<int>(responseType.value()));
             switch (responseType.value())
             {
             case ResponseType::DEVICE_INFO:

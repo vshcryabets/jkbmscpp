@@ -206,6 +206,33 @@ void BleRepoSimpleBleImpl::startConnection(
             return;
         }
         
+        // Find adapter
+        auto adapterIt = adapterCache.find(adapterId);
+        if (adapterIt == adapterCache.end()) {
+            spdlog::error("Adapter not found: {}", adapterId);
+            return;
+        }
+        
+        // Find peripheral
+        SimpleBLE::Peripheral* targetPeripheral = nullptr;
+        try {
+            auto peripherals = adapterIt->second.scan_get_results();
+            for (auto& peripheral : peripherals) {
+                if (peripheral.address() == peripheralId) {
+                    targetPeripheral = &peripheral;
+                    break;
+                }
+            }
+        } catch (const std::exception& e) {
+            spdlog::error("Error getting peripherals: {}", e.what());
+            return;
+        }
+        
+        if (targetPeripheral == nullptr) {
+            spdlog::error("Peripheral not found: {}", peripheralId);
+            return;
+        }
+        
         // Create initial BMS state
         JkbmsState initialState{
             .vendorId = "",
@@ -220,12 +247,13 @@ void BleRepoSimpleBleImpl::startConnection(
         auto stateFlow = std::make_shared<flow::StateFlow<JkbmsState>>(initialState);
         bmsStateFlows[key] = stateFlow;
         
+        // Create Source for this device
+        auto source = std::make_unique<JkBmsSourceSimpleBleImpl>(*targetPeripheral, dumpLog);
+        bmsSources[key] = std::move(source);
+        
         // Create Controller for this device
-        auto controller = std::make_unique<JkBmsCpp::Controller>();
-        auto source = std::make_unique
-        controller->start(
-
-        );
+        auto controller = std::make_unique<JkBmsCpp::Controller>(dumpLog);
+        controller->start(bmsSources[key].get());
         bmsControllers[key] = std::move(controller);
     }
     
@@ -250,8 +278,14 @@ void BleRepoSimpleBleImpl::stopConnection(BleAdapterId adapterId, PeripheralId p
             bmsControllers.erase(controllerIt);
         }
         
+        // Remove source
+        bmsSources.erase(key);
+        
         // Remove state flow
         bmsStateFlows.erase(key);
+        
+        // Remove device info requested flag
+        deviceInfoRequested.erase(key);
     }
     
     spdlog::info("Stopped connection to device: adapter={}, peripheral={}", adapterId, peripheralId);
@@ -295,9 +329,36 @@ void BleRepoSimpleBleImpl::connectionWorker() {
                     continue;
                 }
                 
-                // TODO: Read device state from controller and emit to StateFlow
-                // auto deviceInfoFuture = controllerIt->second->readDeviceState();
-                // Wait for result and update StateFlow
+                // Request device info once
+                if (!deviceInfoRequested[key]) {
+                    auto deviceInfoFuture = controllerIt->second->readDeviceState();
+                    
+                    // Wait for result with timeout
+                    auto status = deviceInfoFuture.wait_for(std::chrono::milliseconds(5000));
+                    if (status == std::future_status::ready) {
+                        deviceInfoRequested[key] = true;
+                        auto result = deviceInfoFuture.get();
+                        if (result.has_value()) {
+                            const auto& deviceInfo = result.value();
+                            JkbmsState state = flowIt->second->state();
+                            state.vendorId = std::string(deviceInfo.vendorId.data());
+                            state.hwVersion = std::string(deviceInfo.hwVersion.data());
+                            state.swVersion = std::string(deviceInfo.swVersion.data());
+                            state.uptimeSeconds = deviceInfo.uptimeSeconds;
+                            state.deviceName = std::string(deviceInfo.deviceName.data());
+                            state.serialNumber = std::string(deviceInfo.serialNumber.data());
+                            flowIt->second->emit(state);
+                            spdlog::info("Updated device info for adapter={}, peripheral={}: vendor={}, hw={}, sw={}", 
+                                        adapterId, peripheralId, state.vendorId, state.hwVersion, state.swVersion);
+                        } else {
+                            spdlog::error("Failed to read device info: error code {}", 
+                                        static_cast<int>(result.error()));
+                        }
+                    } else {
+                        spdlog::warn("Device info request timed out for adapter={}, peripheral={}", 
+                                    adapterId, peripheralId);
+                    }
+                }
                 
             } catch (const std::exception& e) {
                 spdlog::error("Error in connection worker for adapter={}, peripheral={}: {}", 
