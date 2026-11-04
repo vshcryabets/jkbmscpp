@@ -129,7 +129,7 @@ void App::run() {
         return hbox({
             window(text(" Host "), hostDevicesMenu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32),
             window(text(" Scanned "), scanDevicesMenu->Render()) | size(ftxui::WIDTH, ftxui::EQUAL, 32),
-            window(text(" Details "), bmsInfoPane) | size(ftxui::WIDTH, ftxui::EQUAL, 40)
+            window(text(" Details "), bmsInfoPane) | flex
         });
     });
 

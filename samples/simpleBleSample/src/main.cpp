@@ -56,7 +56,7 @@ int main() {
         std::cout << "Starting BLE scan for 5 seconds..." << std::endl;
         
         adapter.scan_start();
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
         adapter.scan_stop();
         
         // Get scan results
@@ -79,7 +79,7 @@ int main() {
 
         std::cout << "Select a device to connect to (0 to exit): ";
         size_t choice = autoJkBms;
-        // std::cin >> choice;
+        std::cin >> choice;
         if (choice < 1) {
             std::cout << "Exiting..." << std::endl;
             return 0;
