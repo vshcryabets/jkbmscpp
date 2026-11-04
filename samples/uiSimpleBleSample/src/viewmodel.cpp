@@ -193,6 +193,12 @@ void ViewModel::on_state_changed(const JkbmsState& bmsState) {
         .uptimeSeconds = bmsState.uptimeSeconds,
         .deviceName = bmsState.deviceName,
         .serialNumber = bmsState.serialNumber,
+        .chargePercentage = bmsState.chargePercentage,
+        .remainingCapacity_mAh = bmsState.remainingCapacity_mAh,
+        .fullCapacity_mAh = bmsState.fullCapacity_mAh,
+        .batteryVoltage_mV = bmsState.batteryVoltage_mV,
+        .batteryPower_mW = bmsState.batteryPower_mW,
+        .chargeCurrent_mA = bmsState.chargeCurrent_mA,
         .loading = false
     };
     

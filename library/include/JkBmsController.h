@@ -9,6 +9,8 @@
 #include "CFunctions.h"
 
 namespace JkBmsCpp {
+    constexpr static uint8_t DEVICE_INFO_REGISTER = 0x97;
+    constexpr static uint8_t CELLS_INFO_REGISTER = 0x96;
 
     typedef std::future<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoFuture;
     typedef std::promise<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoPromise;

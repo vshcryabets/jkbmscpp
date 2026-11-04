@@ -28,6 +28,12 @@ struct JkbmsState {
     uint32_t uptimeSeconds;
     std::string deviceName;
     std::string serialNumber;
+    uint8_t chargePercentage;
+    uint32_t remainingCapacity_mAh;
+    uint32_t fullCapacity_mAh;
+    uint32_t batteryVoltage_mV;
+    uint32_t batteryPower_mW;
+    int32_t chargeCurrent_mA;
 
     bool operator==(const JkbmsState& other) const {
         return vendorId == other.vendorId &&
@@ -35,7 +41,13 @@ struct JkbmsState {
                swVersion == other.swVersion &&
                uptimeSeconds == other.uptimeSeconds &&
                deviceName == other.deviceName &&
-               serialNumber == other.serialNumber;
+               serialNumber == other.serialNumber &&
+               chargePercentage == other.chargePercentage &&
+               remainingCapacity_mAh == other.remainingCapacity_mAh &&
+               fullCapacity_mAh == other.fullCapacity_mAh &&
+               batteryVoltage_mV == other.batteryVoltage_mV &&
+               batteryPower_mW == other.batteryPower_mW &&
+               chargeCurrent_mA == other.chargeCurrent_mA;
     }
 
     bool operator!=(const JkbmsState& other) const {

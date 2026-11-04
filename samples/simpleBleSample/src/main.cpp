@@ -160,7 +160,9 @@ int main() {
                     std::cout << "Unknown future status.\n";
                 }
             }            
-        } while(false);        
+        } while(false);
+        
+        std::this_thread::sleep_for(std::chrono::seconds(30));
 
         controller.end();
     } catch (const std::exception& e) {

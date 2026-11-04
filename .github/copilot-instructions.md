@@ -120,6 +120,10 @@ Data structures in `JkBmsFrames.h` directly mirror protocol bytes:
 - **SimpleBLE** (v0.10.4) - fetched via CMake for sample only; not required for library
 - **libdbus-cpp-dev** - required on Linux/Armbian for BLE support
 
+## Documentation
+- **`doc/notes.md`** - Project design notes and technical documentation
+- **`doc/responses.txt`** - Sample captured BMS device responses for testing and validation
+
 ## Important Notes
 - The library itself has **no external runtime dependencies** beyond the C++ stdlib
 - Platform support verified: macOS (Apple Silicon), Linux x86, Armbian

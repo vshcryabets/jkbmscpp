@@ -44,6 +44,12 @@ struct BmsInfo {
     uint32_t uptimeSeconds;
     std::string deviceName;
     std::string serialNumber;
+    uint8_t chargePercentage = 0;
+    uint32_t remainingCapacity_mAh = 0;
+    uint32_t fullCapacity_mAh = 0;
+    uint32_t batteryVoltage_mV = 0;
+    uint32_t batteryPower_mW = 0;
+    int32_t chargeCurrent_mA = 0;
     bool loading = false;
 
     [[nodiscard]] bool operator==(const BmsInfo& other) const {
@@ -53,6 +59,12 @@ struct BmsInfo {
                uptimeSeconds == other.uptimeSeconds &&
                deviceName == other.deviceName &&
                serialNumber == other.serialNumber &&
+               chargePercentage == other.chargePercentage &&
+               remainingCapacity_mAh == other.remainingCapacity_mAh &&
+               fullCapacity_mAh == other.fullCapacity_mAh &&
+               batteryVoltage_mV == other.batteryVoltage_mV &&
+               batteryPower_mW == other.batteryPower_mW &&
+               chargeCurrent_mA == other.chargeCurrent_mA &&
                loading == other.loading;
     }
 
@@ -69,9 +81,12 @@ struct fmt::formatter<uiSimpleBleSample::BmsInfo> {
     
     auto format(const uiSimpleBleSample::BmsInfo& bms, fmt::format_context& ctx) const {
         return fmt::format_to(ctx.out(),
-            "BmsInfo(vendor={}, hw={}, sw={}, uptime={}s, name={}, sn={}, loading={})",
+            "BmsInfo(vendor={}, hw={}, sw={}, uptime={}s, name={}, sn={}, charge={}%, cap={}/{}mAh, "
+            "volt={}mV, power={}mW, current={}mA, loading={})",
             bms.vendorId, bms.hwVersion, bms.swVersion, bms.uptimeSeconds,
-            bms.deviceName, bms.serialNumber, bms.loading);
+            bms.deviceName, bms.serialNumber, bms.chargePercentage,
+            bms.remainingCapacity_mAh, bms.fullCapacity_mAh,
+            bms.batteryVoltage_mV, bms.batteryPower_mW, bms.chargeCurrent_mA, bms.loading);
     }
 };
 

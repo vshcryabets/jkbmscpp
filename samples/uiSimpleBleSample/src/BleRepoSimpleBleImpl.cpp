@@ -202,7 +202,9 @@ void BleRepoSimpleBleImpl::startConnection(
         
         // Check if already connected
         if (bmsStateFlows.find(key) != bmsStateFlows.end()) {
-            spdlog::warn("Device already connected: adapter={}, peripheral={}", adapterId, peripheralId);
+            spdlog::warn("Device already connected: adapter={}, peripheral={}", 
+                adapterId, 
+                peripheralId);
             return;
         }
         
@@ -240,7 +242,13 @@ void BleRepoSimpleBleImpl::startConnection(
             .swVersion = "",
             .uptimeSeconds = 0,
             .deviceName = "",
-            .serialNumber = ""
+            .serialNumber = "",
+            .chargePercentage = 0,
+            .remainingCapacity_mAh = 0,
+            .fullCapacity_mAh = 0,
+            .batteryVoltage_mV = 0,
+            .batteryPower_mW = 0,
+            .chargeCurrent_mA = 0
         };
         
         // Create StateFlow for this device with initial state
@@ -265,7 +273,10 @@ void BleRepoSimpleBleImpl::startConnection(
     }
 }
 
-void BleRepoSimpleBleImpl::stopConnection(BleAdapterId adapterId, PeripheralId peripheralId) {
+void BleRepoSimpleBleImpl::stopConnection(
+    BleAdapterId adapterId, 
+    PeripheralId peripheralId
+) {
     auto key = std::make_pair(adapterId, peripheralId);
     
     {
@@ -291,7 +302,10 @@ void BleRepoSimpleBleImpl::stopConnection(BleAdapterId adapterId, PeripheralId p
     spdlog::info("Stopped connection to device: adapter={}, peripheral={}", adapterId, peripheralId);
 }
 
-flow::StateFlow<JkbmsState>* BleRepoSimpleBleImpl::getBmsState(BleAdapterId adapterId, PeripheralId peripheralId) {
+flow::StateFlow<JkbmsState>* BleRepoSimpleBleImpl::getBmsState(
+    BleAdapterId adapterId, 
+    PeripheralId peripheralId
+) {
     auto key = std::make_pair(adapterId, peripheralId);
     
     std::lock_guard<std::mutex> lock(connectionFlowsLock);
@@ -299,7 +313,6 @@ flow::StateFlow<JkbmsState>* BleRepoSimpleBleImpl::getBmsState(BleAdapterId adap
     if (it != bmsStateFlows.end()) {
         return it->second.get();
     }
-    
     return nullptr;
 }
 
@@ -349,13 +362,41 @@ void BleRepoSimpleBleImpl::connectionWorker() {
                             state.serialNumber = std::string(deviceInfo.serialNumber.data());
                             flowIt->second->emit(state);
                             spdlog::info("Updated device info for adapter={}, peripheral={}: vendor={}, hw={}, sw={}", 
-                                        adapterId, peripheralId, state.vendorId, state.hwVersion, state.swVersion);
+                                        adapterId, 
+                                        peripheralId, 
+                                        state.vendorId, 
+                                        state.hwVersion, 
+                                        state.swVersion);
                         } else {
                             spdlog::error("Failed to read device info: error code {}", 
                                         static_cast<int>(result.error()));
                         }
                     } else {
                         spdlog::warn("Device info request timed out for adapter={}, peripheral={}", 
+                                    adapterId, peripheralId);
+                    }
+                } else {
+                    // load cells information
+                    auto cellsFuture = controllerIt->second->readCellsState();
+                    auto status = cellsFuture.wait_for(std::chrono::milliseconds(5000));
+                    if (status == std::future_status::ready) {
+                        auto result = cellsFuture.get();
+                        if (result.has_value()) {
+                            const auto& cells = result.value();
+                            JkbmsState state = flowIt->second->state();
+                            state.chargePercentage = cells.batteryPercentage;
+                            state.remainingCapacity_mAh = cells.remainingCapacity_mAh;
+                            state.fullCapacity_mAh = cells.fullCapacity_mAh;
+                            state.batteryVoltage_mV = cells.batteryVoltage_mV;
+                            state.batteryPower_mW = cells.batteryPower_mW;
+                            state.chargeCurrent_mA = cells.chargeCurrent_mA;
+                            flowIt->second->emit(state);
+                        } else {
+                            spdlog::error("Failed to read cells info: error code {}", 
+                                        static_cast<int>(result.error()));
+                        }
+                    } else {
+                        spdlog::warn("Cells info request timed out for adapter={}, peripheral={}", 
                                     adapterId, peripheralId);
                     }
                 }

@@ -20,6 +20,10 @@ App::~App() {
 }
 
 void App::run() {
+    bool hostMenuFocused = false;
+    bool scanMenuFocused = false;
+    bool backButtonFocused = false;
+    
     // host devices
     MenuOption hostDeviceOptions;
     hostDeviceOptions.on_enter = [&] {
@@ -33,6 +37,25 @@ void App::run() {
         }
     };
     auto hostDevicesMenu = Menu(&host_devices_, &host_device_selected_, hostDeviceOptions);
+    auto hostDevicesWithLogging = hostDevicesMenu | CatchEvent([&hostMenuFocused](Event e) {
+        bool nowFocused = (e != Event::Tab && e != Event::TabReverse && 
+                          e != Event::ArrowRight && e != Event::ArrowLeft);
+        
+        if (!hostMenuFocused && nowFocused) {
+            hostMenuFocused = true;
+            spdlog::info("Host menu focused (onMenuFocused)");
+        } else if (hostMenuFocused && (e == Event::Tab || e == Event::TabReverse || 
+                                       e == Event::ArrowRight || e == Event::ArrowLeft)) {
+            hostMenuFocused = false;
+            spdlog::info("Host menu lost focus (onMenuFocusLost)");
+        }
+        
+        if (e == Event::Tab || e == Event::TabReverse || 
+            e == Event::ArrowRight || e == Event::ArrowLeft) {
+            spdlog::info("User navigating with arrow/tab keys in Host menu");
+        }
+        return false;
+    });
     
     // scanned devices
     MenuOption scanDeviceOptions;
@@ -45,13 +68,46 @@ void App::run() {
         }
     };
     auto scanDevicesMenu = Menu(&scanned_devices_display_, &scan_device_selected_, scanDeviceOptions);
-
+    auto scanDevicesWithLogging = scanDevicesMenu | CatchEvent([&scanMenuFocused](Event e) {
+        bool nowFocused = (e != Event::Tab && e != Event::TabReverse && 
+                          e != Event::ArrowRight && e != Event::ArrowLeft);
+        
+        if (!scanMenuFocused && nowFocused) {
+            scanMenuFocused = true;
+            spdlog::info("Scanned Devices menu focused (onMenuFocused)");
+        } else if (scanMenuFocused && (e == Event::Tab || e == Event::TabReverse || 
+                                       e == Event::ArrowRight || e == Event::ArrowLeft)) {
+            scanMenuFocused = false;
+            spdlog::info("Scanned Devices menu lost focus (onMenuFocusLost)");
+        }
+        
+        if (e == Event::Tab || e == Event::TabReverse || 
+            e == Event::ArrowRight || e == Event::ArrowLeft) {
+            spdlog::info("User navigating with arrow/tab keys in Scanned Devices menu");
+        }
+        return false;
+    });
+    
     // BMS info back button
     auto backButton = Button("Back", [&] {
         viewModel_.onUiAction(BmsInfoBackClicked{});
     });
+    auto backButtonWithLogging = backButton | CatchEvent([&backButtonFocused](Event e) {
+        bool nowFocused = (e != Event::Tab && e != Event::TabReverse && 
+                          e != Event::ArrowRight && e != Event::ArrowLeft);
+        
+        if (!backButtonFocused && nowFocused) {
+            backButtonFocused = true;
+            spdlog::info("Back button focused (onMenuFocused)");
+        } else if (backButtonFocused && (e == Event::Tab || e == Event::TabReverse || 
+                                         e == Event::ArrowRight || e == Event::ArrowLeft)) {
+            backButtonFocused = false;
+            spdlog::info("Back button lost focus (onMenuFocusLost)");
+        }
+        return false;
+    });
 
-    auto layout = Renderer(Container::Horizontal({hostDevicesMenu, scanDevicesMenu, backButton}), 
+    auto layout = Renderer(Container::Horizontal({hostDevicesMenu, scanDevicesMenu, backButtonWithLogging}), 
     [&, hostDevicesMenu, scanDevicesMenu, backButton] {
         bool haveUpdate = false;
         auto currentScreen = uiSimpleBleSample::Screen::SELECT_HOST_DEVICE;
@@ -122,6 +178,14 @@ void App::run() {
                 infoElements.push_back(hbox({text("Device Name: "), text(bmsInfo_storage_.deviceName) | bold}));
                 infoElements.push_back(hbox({text("Serial Number: "), text(bmsInfo_storage_.serialNumber) | bold}));
                 infoElements.push_back(hbox({text("Uptime (s): "), text(std::to_string(bmsInfo_storage_.uptimeSeconds)) | bold}));
+                infoElements.push_back(separator());
+                infoElements.push_back(text("Battery Status") | bold);
+                infoElements.push_back(hbox({text("Charge: "), text(std::to_string(bmsInfo_storage_.chargePercentage) + "%") | bold}));
+                infoElements.push_back(hbox({text("Remaining: "), text(std::to_string(bmsInfo_storage_.remainingCapacity_mAh) + " mAh") | bold}));
+                infoElements.push_back(hbox({text("Full Capacity: "), text(std::to_string(bmsInfo_storage_.fullCapacity_mAh) + " mAh") | bold}));
+                infoElements.push_back(hbox({text("Voltage: "), text(std::to_string(bmsInfo_storage_.batteryVoltage_mV) + " mV") | bold}));
+                infoElements.push_back(hbox({text("Power: "), text(std::to_string(bmsInfo_storage_.batteryPower_mW) + " mW") | bold}));
+                infoElements.push_back(hbox({text("Current: "), text(std::to_string(bmsInfo_storage_.chargeCurrent_mA) + " mA") | bold}));
             }
             bmsInfoPane = vbox(infoElements);
         }
