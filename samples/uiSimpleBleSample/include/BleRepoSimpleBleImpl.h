@@ -54,7 +54,7 @@ public:
     virtual std::vector<Peripheral> getScanResults(BleAdapterId adapterId) override;
     virtual flow::StateFlow<std::vector<Peripheral>>& getScanFlow(BleAdapterId adapterId) override;
     
-    virtual void startConnection(BleAdapterId adapterId, PeripheralId peripheralId) override;
+    virtual ConnectionResult startConnection(BleAdapterId adapterId, PeripheralId peripheralId) override;
     virtual void stopConnection(BleAdapterId adapterId, PeripheralId peripheralId) override;
     virtual flow::StateFlow<JkbmsState>* getBmsState(BleAdapterId adapterId, PeripheralId peripheralId) override;
 };

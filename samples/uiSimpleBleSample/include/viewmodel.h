@@ -81,25 +81,6 @@ struct BmsInfo {
     }
 };
 
-}
-
-template <>
-struct fmt::formatter<uiSimpleBleSample::BmsInfo> {
-    constexpr auto parse(fmt::format_parse_context& ctx) { return ctx.begin(); }
-    
-    auto format(const uiSimpleBleSample::BmsInfo& bms, fmt::format_context& ctx) const {
-        return fmt::format_to(ctx.out(),
-            "BmsInfo(vendor={}, hw={}, sw={}, uptime={}s, name={}, sn={}, charge={}%, cap={}/{}mAh, "
-            "volt={}mV, power={}mW, current={}mA, state={})",
-            bms.vendorId, bms.hwVersion, bms.swVersion, bms.uptimeSeconds,
-            bms.deviceName, bms.serialNumber, bms.chargePercentage,
-            bms.remainingCapacity_mAh, bms.fullCapacity_mAh,
-            bms.batteryVoltage_mV, bms.batteryPower_mW, bms.chargeCurrent_mA, static_cast<int>(bms.state));
-    }
-};
-
-namespace uiSimpleBleSample {
-
 struct ViewState {
     const std::optional<Screen> currentScreen = std::nullopt;
     const std::optional<std::vector<std::string>> bleHostDevices = std::nullopt;
@@ -109,6 +90,7 @@ struct ViewState {
     const std::optional<int> activeScanDevice = std::nullopt;
     const std::optional<bool> needToCloseApp = std::nullopt;
     const std::optional<BmsInfo> bmsInfo = std::nullopt;
+    const std::optional<std::string> peripheralId = std::nullopt;
 
     [[nodiscard]] bool operator==(const ViewState& other) const {
         return currentScreen == other.currentScreen && 
@@ -118,7 +100,8 @@ struct ViewState {
                activeHostDevice == other.activeHostDevice &&
                activeScanDevice == other.activeScanDevice &&
                needToCloseApp == other.needToCloseApp &&
-               bmsInfo == other.bmsInfo;
+               bmsInfo == other.bmsInfo &&
+               peripheralId == other.peripheralId;
     }
 
     [[nodiscard]] bool operator!=(const ViewState& other) const {
@@ -134,7 +117,8 @@ struct ViewState {
             .activeHostDevice = copy.activeHostDevice.has_value() ? copy.activeHostDevice : this->activeHostDevice,
             .activeScanDevice = copy.activeScanDevice.has_value() ? copy.activeScanDevice : this->activeScanDevice,
             .needToCloseApp = copy.needToCloseApp.has_value() ? copy.needToCloseApp : this->needToCloseApp,
-            .bmsInfo = copy.bmsInfo.has_value() ? copy.bmsInfo : this->bmsInfo
+            .bmsInfo = copy.bmsInfo.has_value() ? copy.bmsInfo : this->bmsInfo,
+            .peripheralId = copy.peripheralId.has_value() ? copy.peripheralId : this->peripheralId
         };
         return result;
     }
@@ -176,9 +160,14 @@ struct fmt::formatter<uiSimpleBleSample::ViewState> {
             bms_str = fmt::format("{}", state.bmsInfo.value());
         }
         
+        std::string peripheral_str = "null";
+        if (state.peripheralId.has_value()) {
+            peripheral_str = fmt::format("{}", state.peripheralId.value());
+        }
+        
         return fmt::format_to(ctx.out(),
-            "ViewState(screen={}, hostDevice={}, scanDevice={}, closeApp={}, bms={})",
-            screen_str, host_str, scan_str, close_str, bms_str);
+            "ViewState(screen={}, hostDevice={}, scanDevice={}, closeApp={}, peripheral={}, bms={})",
+            screen_str, host_str, scan_str, close_str, peripheral_str, bms_str);
     }
 };
 
@@ -219,18 +208,25 @@ private:
     JkBmsCpp::ObserveJkbmsStateUseCase& observeJkbmsStateUseCase;
     IoExecutor& ioExecutor;
     std::vector<GetAdaptersUseCase::Result> adapterResults;
-    std::string currentConnectedDeviceId;
-    bool firstBmsStateReceived = false;
+    flow::StateFlow<JkbmsState>* observeFlow = nullptr;
 
     void handleRenderStarted();
     void handleHostDeviceQuitClicked();
     void handleHostDeviceSelected(const OnHostDeviceSelected& event);
     void handleScanDeviceQuitClicked();
-    void handleScannedDeviceSelected(const OnScannedDeviceSelected& event);
+    void handleScannedDeviceSelected(const std::string& peripheralId);
     void handleBmsInfoBackClicked();
 
 public:
-    ViewModel(GetAdaptersUseCase& useCase, StartScanUseCase& scanUseCase, StopScanUseCase& stopScanUseCase, ObserveScanResultsUseCase& observeUseCase, StartConnectionUseCase& connectionUseCase, StopConnectionUseCase& stopConnectionUseCase, JkBmsCpp::ObserveJkbmsStateUseCase& observeJkbmsUseCase, IoExecutor& executor);
+    ViewModel(
+        GetAdaptersUseCase& useCase, 
+        StartScanUseCase& scanUseCase, 
+        StopScanUseCase& stopScanUseCase, 
+        ObserveScanResultsUseCase& observeUseCase, 
+        StartConnectionUseCase& connectionUseCase, 
+        StopConnectionUseCase& stopConnectionUseCase, 
+        JkBmsCpp::ObserveJkbmsStateUseCase& observeJkbmsUseCase, 
+        IoExecutor& executor);
     virtual ~ViewModel() = default;
     void onUiAction(const UiEvent& event) noexcept;
     flow::StateFlow<std::shared_ptr<ViewState>>& getStateFlow() { return stateFlow; }
@@ -245,3 +241,28 @@ public:
 };
 
 }
+
+template <>
+struct fmt::formatter<uiSimpleBleSample::BmsInfo> {
+    constexpr auto parse(fmt::format_parse_context& ctx) { return ctx.begin(); }
+    
+    auto format(const uiSimpleBleSample::BmsInfo& bms, fmt::format_context& ctx) const {
+        return fmt::format_to(ctx.out(),
+            "BmsInfo(vendor={}, hw={}, sw={}, uptime={}s, name={}, sn={}, charge={}%, cap={}/{}mAh, "
+            "volt={}mV, power={}mW, current={}mA, state={})",
+            bms.vendorId, 
+            bms.hwVersion, 
+            bms.swVersion, 
+            bms.uptimeSeconds,
+            bms.deviceName, 
+            bms.serialNumber, 
+            bms.chargePercentage,
+            bms.remainingCapacity_mAh, 
+            bms.fullCapacity_mAh,
+            bms.batteryVoltage_mV, 
+            bms.batteryPower_mW, 
+            bms.chargeCurrent_mA, 
+            static_cast<int>(bms.state)
+        );
+    }
+};

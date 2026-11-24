@@ -9,6 +9,14 @@
 using BleAdapterId = int16_t;
 using PeripheralId = std::string;
 
+enum class ConnectionResult : uint8_t {
+    Success = 0,
+    AdapterNotFound = 1,
+    PeripheralNotFound = 2,
+    AlreadyConnected = 3,
+    UnknownError = 4
+};
+
 struct Peripheral {
     PeripheralId id;
     std::string name;
@@ -68,7 +76,7 @@ public:
     virtual std::vector<Peripheral> getScanResults(BleAdapterId adapterId) = 0;
     virtual flow::StateFlow<std::vector<Peripheral>>& getScanFlow(BleAdapterId adapterId) = 0;
     
-    virtual void startConnection(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
+    virtual ConnectionResult startConnection(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
     virtual void stopConnection(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
     virtual flow::StateFlow<JkbmsState>* getBmsState(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
 };

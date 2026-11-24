@@ -192,7 +192,7 @@ void BleRepoSimpleBleImpl::scanWorker() {
     }
 }
 
-void BleRepoSimpleBleImpl::startConnection(
+ConnectionResult BleRepoSimpleBleImpl::startConnection(
     BleAdapterId adapterId, 
     PeripheralId peripheralId) {
     auto key = std::make_pair(adapterId, peripheralId);
@@ -205,14 +205,14 @@ void BleRepoSimpleBleImpl::startConnection(
             spdlog::warn("Device already connected: adapter={}, peripheral={}", 
                 adapterId, 
                 peripheralId);
-            return;
+            return ConnectionResult::AlreadyConnected;
         }
         
         // Find adapter
         auto adapterIt = adapterCache.find(adapterId);
         if (adapterIt == adapterCache.end()) {
             spdlog::error("Adapter not found: {}", adapterId);
-            return;
+            return ConnectionResult::AdapterNotFound;
         }
         
         // Find peripheral
@@ -227,12 +227,12 @@ void BleRepoSimpleBleImpl::startConnection(
             }
         } catch (const std::exception& e) {
             spdlog::error("Error getting peripherals: {}", e.what());
-            return;
+            return ConnectionResult::UnknownError;
         }
         
         if (targetPeripheral == nullptr) {
             spdlog::error("Peripheral not found: {}", peripheralId);
-            return;
+            return ConnectionResult::PeripheralNotFound;
         }
         
         // Create initial BMS state
@@ -271,6 +271,8 @@ void BleRepoSimpleBleImpl::startConnection(
     if (!connectionWorkerThread.joinable()) {
         connectionWorkerThread = std::thread(&BleRepoSimpleBleImpl::connectionWorker, this);
     }
+    
+    return ConnectionResult::Success;
 }
 
 void BleRepoSimpleBleImpl::stopConnection(

@@ -5,7 +5,7 @@
 class StartConnectionUseCase {
 public:
     virtual ~StartConnectionUseCase() = default;
-    virtual void start(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
+    virtual ConnectionResult start(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
 };
 
 class StartConnectionUseCaseImpl : public StartConnectionUseCase {
@@ -16,7 +16,7 @@ public:
     StartConnectionUseCaseImpl(BleRepo& repo) : bleRepo(repo) {}
     virtual ~StartConnectionUseCaseImpl() = default;
 
-    virtual void start(BleAdapterId adapterId, PeripheralId peripheralId) override {
-        bleRepo.startConnection(adapterId, peripheralId);
+    virtual ConnectionResult start(BleAdapterId adapterId, PeripheralId peripheralId) override {
+        return bleRepo.startConnection(adapterId, peripheralId);
     }
 };

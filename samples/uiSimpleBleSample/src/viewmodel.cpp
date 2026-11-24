@@ -44,7 +44,9 @@ void ViewModel::onUiAction(const UiEvent& event) noexcept {
         } else if (const auto* scanDeviceQuitClicked = dynamic_cast<const ScanDeviceQuitClicked*>(&event)) {
             handleScanDeviceQuitClicked();
         } else if (const auto* scannedDeviceSelected = dynamic_cast<const OnScannedDeviceSelected*>(&event)) {
-            handleScannedDeviceSelected(*scannedDeviceSelected);
+            runOnIo([this, peripheralId = scannedDeviceSelected->deviceId]() {
+                handleScannedDeviceSelected(peripheralId);
+            });
         } else if (const auto* bmsInfoBackClicked = dynamic_cast<const BmsInfoBackClicked*>(&event)) {
             handleBmsInfoBackClicked();
         } else {
@@ -121,68 +123,65 @@ void ViewModel::handleScanDeviceQuitClicked() {
     });
 }
 
-void ViewModel::handleScannedDeviceSelected(const OnScannedDeviceSelected& event) {
+void ViewModel::handleScannedDeviceSelected(const std::string& peripheralId) {
     auto currentState = stateFlow.state();
     if (currentState->activeHostDevice.has_value()) {
-        const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
-        currentConnectedDeviceId = event.deviceId;
-
-        // Find the full Peripheral object to log comprehensive device info
-        const auto& scannedDevices = currentState->scannedDevices;
-        std::string deviceName;
-        if (scannedDevices.has_value()) {
-            for (const auto& device : scannedDevices.value()) {
-                if (device.id == event.deviceId) {
-                    deviceName = device.name;
-                    break;
-                }
-            }
-        }
-        
-        spdlog::info("Selected BLE device - Address: {}, Name: {}, Adapter: {}", 
-                     event.deviceId, deviceName, selectedAdapter.adapterId);
-        
-        try {
-            spdlog::debug("Starting BMS connection to device: {} on adapter: {}", event.deviceId, selectedAdapter.adapterId);
-            runOnIo([this, adapterId=selectedAdapter.adapterId,peripheralId=event.deviceId](){
-                try {
-                    spdlog::debug("Executing connection task on IO thread: device={}, adapter={}", peripheralId, adapterId);
-                    startConnectionUseCase.start(adapterId, peripheralId);
-                    spdlog::debug("Connection started successfully: device={}", peripheralId);
-		            stateFlow.update([this](const auto& state) {
-			            return std::make_shared<ViewState>(
-				            state->copy(
-					            ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Loading } }
-					        )
-				        );
-			        });
-                    
-                    observeJkbmsStateUseCase.observe(peripheralId).subscribe(this);
-                    spdlog::debug("Observation subscribed successfully: device={}", peripheralId);
-                } catch (const std::exception& e) {
-                	spdlog::error("Error in connection task: device={}, adapter={}, exception_type={}, message={}", 
-                                  peripheralId, adapterId, typeid(e).name(), e.what());
-                    stateFlow.update([this](const auto& state) {
-                        return std::make_shared<ViewState>(
-                            state->copy(
-                                ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
-                                )
-                            );
-                    });
-                } catch (...) {
-                    spdlog::error("Unknown error in connection task: device={}, adapter={}", peripheralId, adapterId);
-                    stateFlow.update([this](const auto& state) {
-                        return std::make_shared<ViewState>(
-                            state->copy(
-                                ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
-                                )
-                            );
-                    });
-                }
+        stateFlow.update([this, peripheralId](const auto& currentState) {
+            auto newState = currentState->copy(ViewState{
+                .currentScreen = Screen::VIEW_BMS_INFORMATION,
+                .bmsInfo = BmsInfo{.state = BmsInfoState::Connecting},
+                .peripheralId = peripheralId
             });
+            return std::make_shared<ViewState>(newState);
+        });
+
+        const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
+        auto adapterId = selectedAdapter.adapterId;
+        spdlog::info("Selected BLE device - Address: {}, Adapter: {}", 
+                     peripheralId, selectedAdapter.adapterId);
+        try {
+            spdlog::debug(
+                "Executing connection task on IO thread: device={}, adapter={}", 
+                peripheralId, 
+                adapterId);
+            ConnectionResult result = startConnectionUseCase.start(adapterId, peripheralId);
+            
+            if (result == ConnectionResult::Success) {
+                spdlog::debug("Connection started successfully: device={}", peripheralId);
+                stateFlow.update([this](const auto& state) {
+                    return std::make_shared<ViewState>(
+                        state->copy(
+                            ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Loading } }
+                        )
+                    );
+                });
+                
+                this->observeFlow = observeJkbmsStateUseCase.observe(peripheralId);
+                this->observeFlow->subscribe(this);
+                spdlog::debug("Observation subscribed successfully: device={}", peripheralId);
+            } else {
+                spdlog::error("Failed to start connection: device={}, adapter={}, result={}", 
+                              peripheralId, adapterId, static_cast<int>(result));
+                stateFlow.update([this](const auto& state) {
+                    return std::make_shared<ViewState>(
+                        state->copy(
+                            ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
+                        )
+                    );
+                });
+            }
         } catch (const std::exception& e) {
-            spdlog::error("Error submitting connection task to IO executor: device={}, exception_type={}, message={}", 
-                          event.deviceId, typeid(e).name(), e.what());
+            spdlog::error("Error in connection task: device={}, adapter={}, exception_type={}, message={}", 
+                            peripheralId, adapterId, typeid(e).name(), e.what());
+            stateFlow.update([this](const auto& state) {
+                return std::make_shared<ViewState>(
+                    state->copy(
+                        ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
+                        )
+                    );
+            });
+        } catch (...) {
+            spdlog::error("Unknown error in connection task: device={}, adapter={}", peripheralId, adapterId);
             stateFlow.update([this](const auto& state) {
                 return std::make_shared<ViewState>(
                     state->copy(
@@ -191,34 +190,29 @@ void ViewModel::handleScannedDeviceSelected(const OnScannedDeviceSelected& event
                     );
             });
         }
-
-        stateFlow.update([this](const auto& currentState) {
-            auto newState = currentState->copy(ViewState{
-                .currentScreen = Screen::VIEW_BMS_INFORMATION,
-                .bmsInfo = BmsInfo{.state = BmsInfoState::Connecting}
-            });
-            return std::make_shared<ViewState>(newState);
-        });
     }
 }
 
 void ViewModel::handleBmsInfoBackClicked() {
     auto currentState = stateFlow.state();
-    if (currentState->activeHostDevice.has_value() && !currentConnectedDeviceId.empty()) {
+    if (observeFlow) {
+        observeFlow->unsubscribe(this);
+        observeFlow = nullptr;
+    }
+    if (currentState->activeHostDevice.has_value() && currentState->peripheralId.has_value()) {
+        auto peripheralId = currentState->peripheralId.value();
         const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
-        // TODO store unsubscribe object, this code have no sense
-        observeJkbmsStateUseCase
-            .observe(currentConnectedDeviceId)
-            .unsubscribe(this);
-        runOnIo([this, adapterId=selectedAdapter.adapterId,peripheralId=currentConnectedDeviceId](){
+        runOnIo([
+            this, 
+            adapterId = selectedAdapter.adapterId,
+            peripheralId = peripheralId](){
             stopConnectionUseCase.stop(adapterId, peripheralId);
         });
-        currentConnectedDeviceId.clear();
     }
-    firstBmsStateReceived = false;
     stateFlow.update([](const auto& currentState) {
         auto newState = currentState->copy(ViewState{
-            .currentScreen = Screen::SELECT_TARGET_DEVICE
+            .currentScreen = Screen::SELECT_TARGET_DEVICE,
+            .peripheralId = std::nullopt
         });
         return std::make_shared<ViewState>(newState);
     });
@@ -273,8 +267,6 @@ void ViewModel::on_state_changed(const JkbmsState& bmsState) {
         });
         return std::make_shared<ViewState>(newState);
     });
-    
-    firstBmsStateReceived = true;
 }
 
 }
