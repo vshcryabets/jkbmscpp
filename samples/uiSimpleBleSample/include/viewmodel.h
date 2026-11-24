@@ -24,6 +24,14 @@ enum class Screen: uint8_t {
     VIEW_BMS_INFORMATION = 3
 };
 
+enum class BmsInfoState: uint8_t {
+    None = 0,
+    Connecting = 1,
+    Loading = 2,
+    Error = 3,
+    Ready = 4
+};
+
 struct ScannedDevice {
     std::string name;
     std::string id;
@@ -50,7 +58,7 @@ struct BmsInfo {
     uint32_t batteryVoltage_mV = 0;
     uint32_t batteryPower_mW = 0;
     int32_t chargeCurrent_mA = 0;
-    bool loading = false;
+    BmsInfoState state = BmsInfoState::None;
 
     [[nodiscard]] bool operator==(const BmsInfo& other) const {
         return vendorId == other.vendorId &&
@@ -65,7 +73,7 @@ struct BmsInfo {
                batteryVoltage_mV == other.batteryVoltage_mV &&
                batteryPower_mW == other.batteryPower_mW &&
                chargeCurrent_mA == other.chargeCurrent_mA &&
-               loading == other.loading;
+               state == other.state;
     }
 
     [[nodiscard]] bool operator!=(const BmsInfo& other) const {
@@ -82,11 +90,11 @@ struct fmt::formatter<uiSimpleBleSample::BmsInfo> {
     auto format(const uiSimpleBleSample::BmsInfo& bms, fmt::format_context& ctx) const {
         return fmt::format_to(ctx.out(),
             "BmsInfo(vendor={}, hw={}, sw={}, uptime={}s, name={}, sn={}, charge={}%, cap={}/{}mAh, "
-            "volt={}mV, power={}mW, current={}mA, loading={})",
+            "volt={}mV, power={}mW, current={}mA, state={})",
             bms.vendorId, bms.hwVersion, bms.swVersion, bms.uptimeSeconds,
             bms.deviceName, bms.serialNumber, bms.chargePercentage,
             bms.remainingCapacity_mAh, bms.fullCapacity_mAh,
-            bms.batteryVoltage_mV, bms.batteryPower_mW, bms.chargeCurrent_mA, bms.loading);
+            bms.batteryVoltage_mV, bms.batteryPower_mW, bms.chargeCurrent_mA, static_cast<int>(bms.state));
     }
 };
 
@@ -224,7 +232,7 @@ private:
 public:
     ViewModel(GetAdaptersUseCase& useCase, StartScanUseCase& scanUseCase, StopScanUseCase& stopScanUseCase, ObserveScanResultsUseCase& observeUseCase, StartConnectionUseCase& connectionUseCase, StopConnectionUseCase& stopConnectionUseCase, JkBmsCpp::ObserveJkbmsStateUseCase& observeJkbmsUseCase, IoExecutor& executor);
     virtual ~ViewModel() = default;
-    void onUiAction(const UiEvent& event);
+    void onUiAction(const UiEvent& event) noexcept;
     flow::StateFlow<std::shared_ptr<ViewState>>& getStateFlow() { return stateFlow; }
     
     template<typename Func>

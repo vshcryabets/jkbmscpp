@@ -14,6 +14,8 @@ option(BUILD_SIMPLE_BLE_SAMPLE "Build simpleBleSample" ON)
 option(BUILD_UI_SIMPLE_BLE_SAMPLE "Build uiSimpleBleSample" ON)
 option(USE_STD_STRING "Use std::string instead of custom JkBmsString" ON)
 
+include(FetchContent)
+
 # Enable testing at root level if needed
 if(BUILD_TESTS)
     enable_testing()
@@ -37,6 +39,14 @@ if(BUILD_SIMPLE_BLE_SAMPLE OR BUILD_UI_SIMPLE_BLE_SAMPLE)
     FetchContent_MakeAvailable(simpleble)
     add_subdirectory(${simpleble_SOURCE_DIR}/simpleble ${simpleble_BINARY_DIR}/simpleble)
 endif()
+
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        12.2.1
+  GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(fmt)
 
 # Build the library
 if(BUILD_LIBRARY)

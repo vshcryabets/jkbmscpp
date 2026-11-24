@@ -32,6 +32,7 @@ target_link_libraries(
     ftxui::screen
     ftxui::dom
     ftxui::component
+    fmt::fmt
     )
 
 target_include_directories(uiSimpleBleSample PUBLIC 

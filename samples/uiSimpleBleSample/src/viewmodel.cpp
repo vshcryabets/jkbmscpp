@@ -33,19 +33,29 @@ ViewModel::ViewModel(
 })) {
 }
 
-void ViewModel::onUiAction(const UiEvent& event) {
-    if (const auto* renderStarted = dynamic_cast<const RenderStarted*>(&event)) {
-        handleRenderStarted();
-    } else if (const auto* hostDeviceQuitClicked = dynamic_cast<const HostDeviceQuitClicked*>(&event)) {
-        handleHostDeviceQuitClicked();
-    } else if (const auto* hostDeviceSelected = dynamic_cast<const OnHostDeviceSelected*>(&event)) {
-        handleHostDeviceSelected(*hostDeviceSelected);
-    } else if (const auto* scanDeviceQuitClicked = dynamic_cast<const ScanDeviceQuitClicked*>(&event)) {
-        handleScanDeviceQuitClicked();
-    } else if (const auto* scannedDeviceSelected = dynamic_cast<const OnScannedDeviceSelected*>(&event)) {
-        handleScannedDeviceSelected(*scannedDeviceSelected);
-    } else if (const auto* bmsInfoBackClicked = dynamic_cast<const BmsInfoBackClicked*>(&event)) {
-        handleBmsInfoBackClicked();
+void ViewModel::onUiAction(const UiEvent& event) noexcept {
+    try {
+        if (const auto* renderStarted = dynamic_cast<const RenderStarted*>(&event)) {
+            handleRenderStarted();
+        } else if (const auto* hostDeviceQuitClicked = dynamic_cast<const HostDeviceQuitClicked*>(&event)) {
+            handleHostDeviceQuitClicked();
+        } else if (const auto* hostDeviceSelected = dynamic_cast<const OnHostDeviceSelected*>(&event)) {
+            handleHostDeviceSelected(*hostDeviceSelected);
+        } else if (const auto* scanDeviceQuitClicked = dynamic_cast<const ScanDeviceQuitClicked*>(&event)) {
+            handleScanDeviceQuitClicked();
+        } else if (const auto* scannedDeviceSelected = dynamic_cast<const OnScannedDeviceSelected*>(&event)) {
+            handleScannedDeviceSelected(*scannedDeviceSelected);
+        } else if (const auto* bmsInfoBackClicked = dynamic_cast<const BmsInfoBackClicked*>(&event)) {
+            handleBmsInfoBackClicked();
+        } else {
+            spdlog::warn("Unknown UI event type: {}", typeid(event).name());
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("Error in onUiAction: event_type={}, exception_type={}, message={}, code={}",
+                      typeid(event).name(), typeid(e).name(), e.what(), -1);
+    } catch (...) {
+        spdlog::error("Unknown error in onUiAction: event_type={}, message={}",
+                      typeid(event).name(), "Unknown exception type");
     }
 }
 
@@ -112,26 +122,80 @@ void ViewModel::handleScanDeviceQuitClicked() {
 }
 
 void ViewModel::handleScannedDeviceSelected(const OnScannedDeviceSelected& event) {
-    spdlog::info("Selected scanned device with ID: {}", event.deviceId);
     auto currentState = stateFlow.state();
     if (currentState->activeHostDevice.has_value()) {
         const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
         currentConnectedDeviceId = event.deviceId;
+
+        // Find the full Peripheral object to log comprehensive device info
+        const auto& scannedDevices = currentState->scannedDevices;
+        std::string deviceName;
+        if (scannedDevices.has_value()) {
+            for (const auto& device : scannedDevices.value()) {
+                if (device.id == event.deviceId) {
+                    deviceName = device.name;
+                    break;
+                }
+            }
+        }
+        
+        spdlog::info("Selected BLE device - Address: {}, Name: {}, Adapter: {}", 
+                     event.deviceId, deviceName, selectedAdapter.adapterId);
         
         try {
-            spdlog::info("Starting BMS connection to device: {} on adapter: {}", event.deviceId, selectedAdapter.adapterId);
+            spdlog::debug("Starting BMS connection to device: {} on adapter: {}", event.deviceId, selectedAdapter.adapterId);
             runOnIo([this, adapterId=selectedAdapter.adapterId,peripheralId=event.deviceId](){
-                startConnectionUseCase.start(adapterId, peripheralId);
-                observeJkbmsStateUseCase.observe(peripheralId).subscribe(this);
+                try {
+                    spdlog::debug("Executing connection task on IO thread: device={}, adapter={}", peripheralId, adapterId);
+                    startConnectionUseCase.start(adapterId, peripheralId);
+                    spdlog::debug("Connection started successfully: device={}", peripheralId);
+		            stateFlow.update([this](const auto& state) {
+			            return std::make_shared<ViewState>(
+				            state->copy(
+					            ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Loading } }
+					        )
+				        );
+			        });
+                    
+                    observeJkbmsStateUseCase.observe(peripheralId).subscribe(this);
+                    spdlog::debug("Observation subscribed successfully: device={}", peripheralId);
+                } catch (const std::exception& e) {
+                	spdlog::error("Error in connection task: device={}, adapter={}, exception_type={}, message={}", 
+                                  peripheralId, adapterId, typeid(e).name(), e.what());
+                    stateFlow.update([this](const auto& state) {
+                        return std::make_shared<ViewState>(
+                            state->copy(
+                                ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
+                                )
+                            );
+                    });
+                } catch (...) {
+                    spdlog::error("Unknown error in connection task: device={}, adapter={}", peripheralId, adapterId);
+                    stateFlow.update([this](const auto& state) {
+                        return std::make_shared<ViewState>(
+                            state->copy(
+                                ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
+                                )
+                            );
+                    });
+                }
             });
         } catch (const std::exception& e) {
-            spdlog::error("Error starting BMS connection: {}", e.what());
+            spdlog::error("Error submitting connection task to IO executor: device={}, exception_type={}, message={}", 
+                          event.deviceId, typeid(e).name(), e.what());
+            stateFlow.update([this](const auto& state) {
+                return std::make_shared<ViewState>(
+                    state->copy(
+                        ViewState{ .bmsInfo = BmsInfo { . state = BmsInfoState::Error } }
+                        )
+                    );
+            });
         }
 
         stateFlow.update([this](const auto& currentState) {
             auto newState = currentState->copy(ViewState{
                 .currentScreen = Screen::VIEW_BMS_INFORMATION,
-                .bmsInfo = BmsInfo{.loading = true}
+                .bmsInfo = BmsInfo{.state = BmsInfoState::Connecting}
             });
             return std::make_shared<ViewState>(newState);
         });
@@ -142,8 +206,9 @@ void ViewModel::handleBmsInfoBackClicked() {
     auto currentState = stateFlow.state();
     if (currentState->activeHostDevice.has_value() && !currentConnectedDeviceId.empty()) {
         const auto& selectedAdapter = adapterResults[currentState->activeHostDevice.value()];
-        
-        observeJkbmsStateUseCase.observe(currentConnectedDeviceId)
+        // TODO store unsubscribe object, this code have no sense
+        observeJkbmsStateUseCase
+            .observe(currentConnectedDeviceId)
             .unsubscribe(this);
         runOnIo([this, adapterId=selectedAdapter.adapterId,peripheralId=currentConnectedDeviceId](){
             stopConnectionUseCase.stop(adapterId, peripheralId);
@@ -199,7 +264,7 @@ void ViewModel::on_state_changed(const JkbmsState& bmsState) {
         .batteryVoltage_mV = bmsState.batteryVoltage_mV,
         .batteryPower_mW = bmsState.batteryPower_mW,
         .chargeCurrent_mA = bmsState.chargeCurrent_mA,
-        .loading = false
+        .state = BmsInfoState::Ready
     };
     
     stateFlow.update([&bmsInfo](const auto& currentState) {

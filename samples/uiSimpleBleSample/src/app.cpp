@@ -165,10 +165,15 @@ void App::run() {
             infoElements.push_back(backButton->Render());
             infoElements.push_back(separator());
             
-            if (bmsInfo_storage_.loading) {
+            if (bmsInfo_storage_.state == BmsInfoState::Connecting || 
+                bmsInfo_storage_.state == BmsInfoState::Loading) {
                 infoElements.push_back(text("BMS Information") | bold);
                 infoElements.push_back(separator());
                 infoElements.push_back(text("Loading...") | color(ftxui::Color::Yellow));
+            } else if (bmsInfo_storage_.state == BmsInfoState::Error) {
+                infoElements.push_back(text("BMS Information") | bold);
+                infoElements.push_back(separator());
+                infoElements.push_back(text("Error loading device information") | color(ftxui::Color::Red));
             } else {
                 infoElements.push_back(text("BMS Information"));
                 infoElements.push_back(separator());
