@@ -19,8 +19,7 @@ namespace flow {
     template <typename T>
     struct has_equality_operators<T, std::void_t<
         decltype(std::declval<const T&>() == std::declval<const T&>()),
-        decltype(std::declval<const T&>() != std::declval<const T&>())
-    >> : std::true_type {};
+        decltype(std::declval<const T&>() != std::declval<const T&>()) >> : std::true_type {};
 
     /// @brief Helper variable template for has_equality_operators
     template <typename T>
@@ -129,7 +128,56 @@ namespace flow {
     class StateFlow {
         static_assert(has_equality_operators_v<T>,
             "StateFlow template parameter T must define both operator== and operator!= for equality comparison");
+    public:
+        /// @brief Alias for the state type
+        using StateType = T;
 
+        /// @brief Returns the current state value
+        /// 
+        /// Thread-safe read of the current state. The returned value is a copy
+        /// and subsequent modifications to the original state will not affect it.
+        /// 
+        /// @return A copy of the current state
+        virtual StateType state() const noexcept = 0;
+
+        /// @brief Subscribes a listener to state changes
+        /// 
+        /// Registers a listener to receive notifications when the state changes.
+        /// The listener is immediately notified with the current state (even if
+        /// it hasn't changed since subscription).
+        /// 
+        /// Thread-safe and safe to call concurrently with other operations.
+        /// Does nothing if listener is null.
+        /// 
+        /// @param listener Pointer to the listener to subscribe. Must not be null
+        ///                 and must remain valid until unsubscribe() is called.
+        virtual void subscribe(StateListener<StateType>* listener) = 0;
+
+        /// @brief Unsubscribes a listener from state changes
+        /// 
+        /// Removes a previously subscribed listener. The listener will no longer
+        /// receive state change notifications after this call.
+        /// 
+        /// Thread-safe and safe to call concurrently with other operations.
+        /// Does nothing if the listener is not currently subscribed.
+        /// 
+        /// @param listener Pointer to the listener to unsubscribe
+        virtual void unsubscribe(StateListener<StateType>* listener) = 0;
+
+        /// @brief Emits a new state and notifies all listeners if it differs from current state
+        /// 
+        /// Atomically updates the state and notifies all registered listeners.
+        /// Listeners are only notified if the new state differs from the current state
+        /// (determined by operator==).
+        /// 
+        /// Thread-safe and safe to call concurrently from multiple threads.
+        /// 
+        /// @param new_state The new state value to emit
+        virtual void emit(const StateType& new_state) = 0;
+    };
+
+    template <typename T>
+    class StateFlowImpl: public StateFlow<T> {
     public:
         /// @brief Alias for the state type
         using StateType = T;
@@ -159,8 +207,8 @@ namespace flow {
         /// @brief Constructs a StateFlow with an initial state
         /// 
         /// @param initial_state The initial state value
-        explicit StateFlow(const StateType& initial_state)
-            : storage_(std::make_shared<Storage>())
+        explicit StateFlowImpl(const StateType& initial_state)
+            : StateFlow<T>(), storage_(std::make_shared<Storage>())
         {
             storage_->state = initial_state;
         }
@@ -169,37 +217,22 @@ namespace flow {
         /// 
         /// @param initial_state The initial state value
         /// @param unsubscribe_listener Listener for subscription lifecycle events (can be nullptr)
-        StateFlow(const StateType& initial_state, UnsubscribeListener<StateType>* unsubscribe_listener)
-            : storage_(std::make_shared<Storage>())
+        StateFlowImpl(
+            const StateType& initial_state, 
+            UnsubscribeListener<StateType>* unsubscribe_listener)
+            : StateFlow<T>(), storage_(std::make_shared<Storage>())
         {
             storage_->state = initial_state;
             storage_->unsubscribe_listener = unsubscribe_listener;
         }
 
-        /// @brief Returns the current state value
-        /// 
-        /// Thread-safe read of the current state. The returned value is a copy
-        /// and subsequent modifications to the original state will not affect it.
-        /// 
-        /// @return A copy of the current state
-        StateType state() const noexcept
+        StateType state() const noexcept override
         {
             std::lock_guard lock(storage_->state_mutex);
             return storage_->state;
         }
 
-        /// @brief Subscribes a listener to state changes
-        /// 
-        /// Registers a listener to receive notifications when the state changes.
-        /// The listener is immediately notified with the current state (even if
-        /// it hasn't changed since subscription).
-        /// 
-        /// Thread-safe and safe to call concurrently with other operations.
-        /// Does nothing if listener is null.
-        /// 
-        /// @param listener Pointer to the listener to subscribe. Must not be null
-        ///                 and must remain valid until unsubscribe() is called.
-        void subscribe(StateListener<StateType>* listener)
+        void subscribe(StateListener<StateType>* listener) override
         {
             if (!listener) return;
             StateType current_state;
@@ -214,16 +247,7 @@ namespace flow {
             listener->on_state_changed(current_state);
         }
 
-        /// @brief Unsubscribes a listener from state changes
-        /// 
-        /// Removes a previously subscribed listener. The listener will no longer
-        /// receive state change notifications after this call.
-        /// 
-        /// Thread-safe and safe to call concurrently with other operations.
-        /// Does nothing if the listener is not currently subscribed.
-        /// 
-        /// @param listener Pointer to the listener to unsubscribe
-        void unsubscribe(StateListener<StateType>* listener)
+        void unsubscribe(StateListener<StateType>* listener) override
         {
             bool was_last_listener = false;
             {
@@ -248,16 +272,7 @@ namespace flow {
             }
         }
 
-        /// @brief Emits a new state and notifies all listeners if it differs from current state
-        /// 
-        /// Atomically updates the state and notifies all registered listeners.
-        /// Listeners are only notified if the new state differs from the current state
-        /// (determined by operator==).
-        /// 
-        /// Thread-safe and safe to call concurrently from multiple threads.
-        /// 
-        /// @param new_state The new state value to emit
-        void emit(const StateType& new_state)
+        void emit(const StateType& new_state) override
         {
             bool has_changes = false;
             {

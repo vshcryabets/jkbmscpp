@@ -198,7 +198,7 @@ class RenderStarted : public UiEvent {};
 class ViewModel : public flow::StateListener<std::vector<Peripheral>>, 
                   public flow::StateListener<JkbmsState> {
 private:
-    flow::StateFlow<std::shared_ptr<ViewState>> stateFlow;
+    flow::StateFlowImpl<std::shared_ptr<ViewState>> stateFlow;
     GetAdaptersUseCase& getAdaptersUseCase;
     StartScanUseCase& startScanUseCase;
     StopScanUseCase& stopScanUseCase;

@@ -252,7 +252,7 @@ ConnectionResult BleRepoSimpleBleImpl::startConnection(
         };
         
         // Create StateFlow for this device with initial state
-        auto stateFlow = std::make_shared<flow::StateFlow<JkbmsState>>(initialState);
+        auto stateFlow = std::make_shared<flow::StateFlowImpl<JkbmsState>>(initialState);
         bmsStateFlows[key] = stateFlow;
         
         // Create Source for this device

@@ -20,7 +20,7 @@ private:
     std::map<BleAdapterId, SimpleBLE::Adapter> adapterCache;
     BleAdapterId nextAdapterId = 0;
     
-    std::map<BleAdapterId, flow::StateFlow<std::vector<Peripheral>>> scanFlows;
+    std::map<BleAdapterId, flow::StateFlowImpl<std::vector<Peripheral>>> scanFlows;
     std::thread scanWorkerThread;
     std::atomic<bool> workerRunning{false};
     std::atomic<int> scanIntervalMs{500};
@@ -29,7 +29,7 @@ private:
     mutable std::mutex scanFlowsLock;
     
     // Connection management
-    std::map<std::pair<BleAdapterId, PeripheralId>, std::shared_ptr<flow::StateFlow<JkbmsState>>> bmsStateFlows;
+    std::map<std::pair<BleAdapterId, PeripheralId>, std::shared_ptr<flow::StateFlowImpl<JkbmsState>>> bmsStateFlows;
     std::map<std::pair<BleAdapterId, PeripheralId>, std::unique_ptr<JkBmsCpp::Controller>> bmsControllers;
     std::map<std::pair<BleAdapterId, PeripheralId>, std::unique_ptr<JkBmsCpp::Source>> bmsSources;
     std::map<std::pair<BleAdapterId, PeripheralId>, bool> deviceInfoRequested;

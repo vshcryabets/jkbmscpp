@@ -49,7 +49,6 @@ ControllerError Controller::requestCellInfoUpdates() noexcept {
         log.info("Cell info updates already requested");
         return CONTROLLER_ERROR_SUCCESS;
     }
-    cellInfoUpdatesRequested = true;
     if (source == nullptr) {
         log.error("Source is not started");
         return CONTROLLER_ERROR_NO_SOURCE;
@@ -61,6 +60,7 @@ ControllerError Controller::requestCellInfoUpdates() noexcept {
         return result;
     }
     source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
+    cellInfoUpdatesRequested = true;
     log.info("Requested periodic cell info updates");
     return CONTROLLER_ERROR_SUCCESS;
 }
