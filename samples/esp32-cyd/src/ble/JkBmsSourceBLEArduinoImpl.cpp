@@ -26,7 +26,7 @@ SourceError JkBmsSourceBLEArduinoImpl::disconnect() {
 }
 
 SourceError JkBmsSourceBLEArduinoImpl::sendCommand(
-    const JkBmsCpp::JkBmsDataBuffer_C command,
+    const ::JkBmsDataBuffer command,
     const JkBmsCpp::UuidStr service_uuid,
     const JkBmsCpp::UuidStr char_uuid
 ) {
@@ -53,7 +53,7 @@ SourceError JkBmsSourceBLEArduinoImpl::subscribe(
     const JkBmsCpp::UuidStr service_uuid,
     const JkBmsCpp::UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
+    void(*callback)(void* context, const ::JkBmsDataBuffer &data)
 ) {
     BLERemoteService* service = client->getService(
         BLEUUID(
@@ -81,7 +81,7 @@ SourceError JkBmsSourceBLEArduinoImpl::subscribe(
             uint8_t* pData, 
             size_t length, 
             bool isNotify) {
-            JkBmsCpp::JkBmsDataBuffer_C dataBuffer = {pData, (uint16_t)length};
+            ::JkBmsDataBuffer dataBuffer = {pData, (uint16_t)length};
             callback(context, dataBuffer);
         }
     );

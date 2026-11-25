@@ -13,7 +13,7 @@ JkBmsSourceSimpleBleImpl::~JkBmsSourceSimpleBleImpl() {
 }
 
 SourceError JkBmsSourceSimpleBleImpl::sendCommand(
-    const JkBmsCpp::JkBmsDataBuffer_C command,
+    const ::JkBmsDataBuffer command,
     const JkBmsCpp::UuidStr service_uuid,
     const JkBmsCpp::UuidStr char_uuid) {
     SimpleBLE::ByteArray command_bytes(command.ptr, command.ptr + command.len);
@@ -41,11 +41,11 @@ SourceError JkBmsSourceSimpleBleImpl::subscribe(
     const JkBmsCpp::UuidStr service_uuid,
     const JkBmsCpp::UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C data)
+    void(*callback)(void* context, const ::JkBmsDataBuffer data)
 ) {
     peripheral.notify(service_uuid, 
         char_uuid, [callback, context](SimpleBLE::ByteArray bytes) {
-            JkBmsCpp::JkBmsDataBuffer_C buffer;
+            ::JkBmsDataBuffer buffer;
             buffer.ptr = bytes.data();
             buffer.len = static_cast<uint16_t>(bytes.size());
             callback(context, buffer);

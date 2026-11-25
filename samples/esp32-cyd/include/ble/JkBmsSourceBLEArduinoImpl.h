@@ -11,7 +11,7 @@ class JkBmsSourceDummyImpl : public JkBmsCpp::Source {
         SourceError connect() override { return SOURCE_ERROR_SUCCESS; }
         SourceError disconnect() override { return SOURCE_ERROR_SUCCESS; }
         SourceError sendCommand(
-            const JkBmsCpp::JkBmsDataBuffer_C command,
+            const ::JkBmsDataBuffer command,
             const JkBmsCpp::UuidStr service_uuid,
             const JkBmsCpp::UuidStr char_uuid
         ) override { return SOURCE_ERROR_SUCCESS; }
@@ -19,7 +19,7 @@ class JkBmsSourceDummyImpl : public JkBmsCpp::Source {
             const JkBmsCpp::UuidStr service_uuid,
             const JkBmsCpp::UuidStr char_uuid,
             void* context,
-            void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
+            void(*callback)(void* context, const ::JkBmsDataBuffer &data)
         ) override { return SOURCE_ERROR_SUCCESS; }
         SourceError unsubscribe(
             const JkBmsCpp::UuidStr service_uuid,
@@ -39,7 +39,7 @@ public:
     SourceError connect() override;
     SourceError disconnect() override;
     SourceError sendCommand(
-        const JkBmsCpp::JkBmsDataBuffer_C command,
+        const ::JkBmsDataBuffer command,
         const JkBmsCpp::UuidStr service_uuid,
         const JkBmsCpp::UuidStr char_uuid
     ) override;
@@ -47,7 +47,7 @@ public:
         const JkBmsCpp::UuidStr service_uuid,
         const JkBmsCpp::UuidStr char_uuid,
         void* context,
-        void(*callback)(void* context, const JkBmsCpp::JkBmsDataBuffer_C &data)
+        void(*callback)(void* context, const ::JkBmsDataBuffer &data)
     ) override;
     SourceError unsubscribe(
         const JkBmsCpp::UuidStr service_uuid,

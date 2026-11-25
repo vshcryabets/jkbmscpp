@@ -1,7 +1,7 @@
 #include "CFunctions.h"
 #include <string.h>
 
-bool checkFrameStart(const JkBmsDataBuffer_C buffer) {
+bool checkFrameStart(const JkBmsDataBuffer buffer) {
     if (buffer.len < 4) {
         return false;
     }
@@ -9,7 +9,7 @@ bool checkFrameStart(const JkBmsDataBuffer_C buffer) {
            buffer.ptr[2] == 0xeb && buffer.ptr[3] == 0x90;
 }
 
-bool checkFrameChecksum(const JkBmsDataBuffer_C buffer) {
+bool checkFrameChecksum(const JkBmsDataBuffer buffer) {
     if (buffer.len < 5) {
         return false;
     }
@@ -20,7 +20,7 @@ bool checkFrameChecksum(const JkBmsDataBuffer_C buffer) {
     return checksum == buffer.ptr[buffer.len - 1];
 }
 
-uint8_t calculateCRC(const JkBmsDataBuffer_C buffer) {
+uint8_t calculateCRC(const JkBmsDataBuffer buffer) {
     uint8_t crc = 0;
     for (uint16_t i = 0; i < buffer.len; i++) {
         crc += buffer.ptr[i];
@@ -28,10 +28,10 @@ uint8_t calculateCRC(const JkBmsDataBuffer_C buffer) {
     return crc;
 }
 
-ControllerError_C prepareCommandBuffer(uint8_t reg, 
+ControllerError prepareCommandBuffer(uint8_t reg, 
     uint32_t value,
     uint8_t length,
-    const JkBmsDataBuffer_C outBuffer) {
+    const JkBmsDataBuffer outBuffer) {
     if (outBuffer.len < 20) {
         return CONTROLLER_ERROR_BUFFER_TOO_SMALL;
     }
@@ -48,7 +48,7 @@ ControllerError_C prepareCommandBuffer(uint8_t reg,
     frame[7] = value >> 8;
     frame[8] = value >> 16;
     frame[9] = value >> 24;
-    JkBmsDataBuffer_C crcBuffer = {frame, CRC_FRAME_SIZE};
+    JkBmsDataBuffer crcBuffer = {frame, CRC_FRAME_SIZE};
     frame[19] = calculateCRC(crcBuffer);
     return CONTROLLER_ERROR_SUCCESS;
 }

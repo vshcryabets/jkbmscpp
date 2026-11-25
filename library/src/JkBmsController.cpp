@@ -44,19 +44,36 @@ void Controller::end()
     }
 }
 
-CellInfoFuture Controller::readCellsState() {
-    pendingCellInfoRequest = std::make_unique<CellInfoPromise>();
+ControllerError Controller::requestCellInfoUpdates() noexcept {
+    if (cellInfoUpdatesRequested) {
+        log.info("Cell info updates already requested");
+        return CONTROLLER_ERROR_SUCCESS;
+    }
+    cellInfoUpdatesRequested = true;
     if (source == nullptr) {
         log.error("Source is not started");
-        pendingCellInfoRequest->set_value(
-            Expected<CellInfoResponse, ControllerError_C>(
-                CONTROLLER_ERROR_NO_SOURCE));
-        return pendingCellInfoRequest->get_future();
+        return CONTROLLER_ERROR_NO_SOURCE;
     }
     uint8_t frame[20];
-    JkBmsDataBuffer_C command = {frame, sizeof(frame)};
-    prepareCommandBuffer(CELLS_INFO_REGISTER, 0, 0, command);
+    JkBmsDataBuffer command = {frame, sizeof(frame)};
+    auto result = prepareCommandBuffer(CELLS_INFO_REGISTER, 0, 0, command);
+    if (result != CONTROLLER_ERROR_SUCCESS) {
+        return result;
+    }
     source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
+    log.info("Requested periodic cell info updates");
+    return CONTROLLER_ERROR_SUCCESS;
+}
+
+CellInfoFuture Controller::readCellsState() {
+    pendingCellInfoRequest = std::make_unique<CellInfoPromise>();
+    auto result = requestCellInfoUpdates();
+    if (result != CONTROLLER_ERROR_SUCCESS) {
+        pendingCellInfoRequest->set_value(
+            Expected<CellInfoResponse, ControllerError>(
+                result));
+        return pendingCellInfoRequest->get_future();
+    }
     return pendingCellInfoRequest->get_future();
 }
 
@@ -66,12 +83,12 @@ DeviceInfoFuture Controller::readDeviceState()
     if (source == nullptr) {
         log.error("Source is not started");
         pendingDeviceInfoRequest->set_value(
-            Expected<DeviceInfoResponse, ControllerError_C>(
+            Expected<DeviceInfoResponse, ControllerError>(
                 CONTROLLER_ERROR_NO_SOURCE));
         return pendingDeviceInfoRequest->get_future();
     }
     uint8_t frame[20];
-    JkBmsDataBuffer_C command = {frame, sizeof(frame)};
+    JkBmsDataBuffer command = {frame, sizeof(frame)};
     prepareCommandBuffer(DEVICE_INFO_REGISTER, 0, 0, command);
     source->sendCommand(command, SERVICE_UUID, CHARACTERISTIC_UUID);
     return pendingDeviceInfoRequest->get_future();
@@ -79,12 +96,12 @@ DeviceInfoFuture Controller::readDeviceState()
 
 void Controller::notificationCallback(
             void* ctx,
-            const JkBmsDataBuffer_C data) {
+            const JkBmsDataBuffer data) {
     Controller* controller = static_cast<Controller*>(ctx);
     controller->handleResponse(data);
 }
 
-void Controller::handleResponse(const JkBmsDataBuffer_C data) {
+void Controller::handleResponse(const JkBmsDataBuffer data) {
     log.info("Received %u bytes", data.len);
     dumpDataToLog(data.ptr, data.len, log);
     if (checkFrameStart(data)) {
@@ -95,7 +112,7 @@ void Controller::handleResponse(const JkBmsDataBuffer_C data) {
     responseBuffer.insert(responseBuffer.end(), data.ptr, data.ptr + data.len);
     if (responseBuffer.size() >= DEFAULT_PACKET_SIZE) {
         // we have full packet, process it
-        JkBmsDataBuffer_C buffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
+        JkBmsDataBuffer buffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
         if (!checkFrameChecksum(buffer)) {
             log.error("Checksum mismatch");
             return;
@@ -110,21 +127,17 @@ void Controller::handleResponse(const JkBmsDataBuffer_C data) {
             {
             case ResponseType::DEVICE_INFO:
                 {
-                    if (pendingDeviceInfoRequest) {
-                        JkBmsDataBuffer_C deviceBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
-                        auto deviceInfo = parseDeviceInfo(deviceBuffer);
-                        pendingDeviceInfoRequest->set_value(deviceInfo);
-                        pendingDeviceInfoRequest.reset();
-                    }
+                    JkBmsDataBuffer deviceBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
+                    handleCellInfoResponse(deviceBuffer);
                 }
                 break;
             case ResponseType::CELL_INFO:
                 {
                     if (pendingCellInfoRequest) {
-                        JkBmsDataBuffer_C cellBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
+                        JkBmsDataBuffer cellBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
                         auto cellInfo = parseCellsInfo(
                             cellBuffer,
-                            CellInfoResponse::CELL_COUNT
+                            JK_BMS_STRUCTURE_CELLS_COUNT
                         );
                         pendingCellInfoRequest->set_value(cellInfo);
                         pendingCellInfoRequest.reset();
@@ -136,7 +149,16 @@ void Controller::handleResponse(const JkBmsDataBuffer_C data) {
             }
             responseBuffer.clear();
         }
-    }    
+    }
+}
+
+void Controller::handleCellInfoResponse(const ::JkBmsDataBuffer data) noexcept
+{
+    auto deviceInfo = parseDeviceInfo(data);
+    if (pendingDeviceInfoRequest) {                        
+        pendingDeviceInfoRequest->set_value(deviceInfo);
+        pendingDeviceInfoRequest.reset();
+    }
 }
 
 } // namespace JkBmsCpp

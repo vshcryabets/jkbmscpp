@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifndef JK_BMS_STRUCTURE_CELLS_COUNT
+#define JK_BMS_STRUCTURE_CELLS_COUNT 32
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,7 +17,7 @@ typedef char UuidStr[37];
 typedef struct {
     uint8_t* ptr;
     uint16_t len;
-} JkBmsDataBuffer_C;
+} JkBmsDataBuffer;
 
 typedef enum {
     CONTROLLER_ERROR_SUCCESS = 0,
@@ -22,7 +26,7 @@ typedef enum {
     CONTROLLER_ERROR_INVALID_MAGIC_BYTES = 3,
     CONTROLLER_ERROR_INVALID_RESPONSE_TYPE = 4,
     CONTROLLER_ERROR_BUFFER_TOO_SMALL = 5,
-} ControllerError_C;
+} ControllerError;
 
 typedef enum {
     SOURCE_ERROR_SUCCESS = 0,
@@ -33,13 +37,45 @@ typedef enum {
     SOURCE_ERROR_NO_SUCH_CHARACTERISTIC = 5,
 } SourceError;
 
+typedef struct {
+    uint16_t cellVoltages_mV[JK_BMS_STRUCTURE_CELLS_COUNT];
+    uint32_t enabledCellMask;
+    uint16_t averageCellVoltage_mV;
+    uint16_t deltaCellVoltage_mV;
+    uint8_t maxVoltageCellIndex;
+    uint8_t minVoltageCellIndex;
+    uint16_t cellResistances_mOhm[JK_BMS_STRUCTURE_CELLS_COUNT];
+    int16_t powerTubeTemperature;
+    uint32_t wireResistanceWarningMask;
+    uint32_t batteryVoltage_mV;
+    uint32_t batteryPower_mW;
+    int32_t chargeCurrent_mA;
+    int16_t temperatureSensor1;
+    int16_t temperatureSensor2;
+    uint16_t errorsMask;
+    int16_t balanceCurrent_mA;
+    uint8_t balanceAction;
+    uint8_t batteryPercentage;
+    uint32_t remainingCapacity_mAh;
+    uint32_t fullCapacity_mAh;
+    uint32_t cycleCount;
+    uint32_t totalCycleCapacity_mAh;
+    uint8_t sohPercentage;
+    uint32_t totalRunTime;
+    uint8_t chargingState;
+    uint8_t dischargingState;
+    uint16_t emergencyTimeCountdown_s;
+} CellInfoResponse;
+
+typedef void (*CellInfoResponseCallback)(void* context, const CellInfoResponse* response);
+
 typedef struct Source_C Source_C;
 
 typedef SourceError (*Source_C_connect_fn)(Source_C* self);
 typedef SourceError (*Source_C_disconnect_fn)(Source_C* self);
 typedef SourceError (*Source_C_sendCommand_fn)(
     Source_C* self,
-    const JkBmsDataBuffer_C command,
+    const JkBmsDataBuffer command,
     const UuidStr service_uuid,
     const UuidStr char_uuid
 );
@@ -48,7 +84,7 @@ typedef SourceError (*Source_C_subscribe_fn)(
     const UuidStr service_uuid,
     const UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsDataBuffer_C data)
+    void(*callback)(void* context, const JkBmsDataBuffer data)
 );
 typedef SourceError (*Source_C_unsubscribe_fn)(
     Source_C* self,
@@ -62,7 +98,7 @@ typedef struct {
     SourceError (*disconnect)(Source_C* self);
     SourceError (*sendCommand)(
         Source_C* self,
-        const JkBmsDataBuffer_C command,
+        const JkBmsDataBuffer command,
         const UuidStr service_uuid,
         const UuidStr char_uuid
     );
@@ -71,7 +107,7 @@ typedef struct {
         const UuidStr service_uuid,
         const UuidStr char_uuid,
         void* context,
-        void(*callback)(void* context, const JkBmsDataBuffer_C data)
+        void(*callback)(void* context, const JkBmsDataBuffer data)
     );
     SourceError (*unsubscribe)(
         Source_C* self,
@@ -97,7 +133,7 @@ static inline SourceError Source_C_disconnect(Source_C* self) {
 
 static inline SourceError Source_C_sendCommand(
     Source_C* self,
-    const JkBmsDataBuffer_C command,
+    const JkBmsDataBuffer command,
     const UuidStr service_uuid,
     const UuidStr char_uuid
 ) {
@@ -109,7 +145,7 @@ static inline SourceError Source_C_subscribe(
     const UuidStr service_uuid,
     const UuidStr char_uuid,
     void* context,
-    void(*callback)(void* context, const JkBmsDataBuffer_C data)
+    void(*callback)(void* context, const JkBmsDataBuffer data)
 ) {
     return self->vtable->subscribe(self, service_uuid, char_uuid, context, callback);
 }
@@ -148,13 +184,13 @@ static inline int32_t getInt32LE(const uint8_t* data, size_t pos) {
             ((uint32_t)data[pos + 3] << 24));
 }
 
-bool checkFrameStart(const JkBmsDataBuffer_C buffer);
-bool checkFrameChecksum(const JkBmsDataBuffer_C buffer);
-uint8_t calculateCRC(const JkBmsDataBuffer_C buffer);
-ControllerError_C prepareCommandBuffer(uint8_t reg, 
+bool checkFrameStart(const JkBmsDataBuffer buffer);
+bool checkFrameChecksum(const JkBmsDataBuffer buffer);
+uint8_t calculateCRC(const JkBmsDataBuffer buffer);
+ControllerError prepareCommandBuffer(uint8_t reg, 
     uint32_t value,
     uint8_t length,
-    const JkBmsDataBuffer_C outBuffer);
+    const JkBmsDataBuffer outBuffer);
 
 #ifdef __cplusplus
 }

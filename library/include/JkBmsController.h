@@ -3,20 +3,28 @@
 #include <cstdint>
 #include <future>
 #include <memory>
+#include <atomic>
 
 #include "JkBmsFrames.h"
 #include "CppWrappers.h"
 #include "CFunctions.h"
+#include "stateflow.h"
 
 namespace JkBmsCpp {
     constexpr static uint8_t DEVICE_INFO_REGISTER = 0x97;
     constexpr static uint8_t CELLS_INFO_REGISTER = 0x96;
 
-    typedef std::future<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoFuture;
-    typedef std::promise<Expected<DeviceInfoResponse, ControllerError_C>> DeviceInfoPromise;
+    typedef std::future<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoFuture;
+    typedef std::promise<Expected<DeviceInfoResponse, ControllerError>> DeviceInfoPromise;
 
-    typedef std::future<Expected<CellInfoResponse, ControllerError_C>> CellInfoFuture;
-    typedef std::promise<Expected<CellInfoResponse, ControllerError_C>> CellInfoPromise;
+    typedef std::future<Expected<CellInfoResponse, ControllerError>> CellInfoFuture;
+    typedef std::promise<Expected<CellInfoResponse, ControllerError>> CellInfoPromise;
+
+    class CellInfoStateListener {
+    public:
+        virtual ~CellInfoStateListener() = default;
+        virtual void onCellInfoStateChanged(const CellInfoResponse& response) = 0;
+    };
 
     class Source {
     public:
@@ -27,7 +35,7 @@ namespace JkBmsCpp {
         virtual SourceError disconnect() = 0;
         /** Send a command to the source */
         virtual SourceError sendCommand(
-            const JkBmsDataBuffer_C command,
+            const JkBmsDataBuffer command,
             const UuidStr service_uuid,
             const UuidStr char_uuid
         ) = 0;
@@ -36,7 +44,7 @@ namespace JkBmsCpp {
             const UuidStr service_uuid,
             const UuidStr char_uuid,
             void* context,
-            void(*callback)(void* context, const JkBmsDataBuffer_C data)
+            void(*callback)(void* context, const JkBmsDataBuffer data)
         ) = 0;
         /** Unsubscribe from a characteristic */
         virtual SourceError unsubscribe(
@@ -61,11 +69,15 @@ namespace JkBmsCpp {
         JkBmsByteBuffer responseBuffer;
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
         std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;
+        std::atomic<bool> cellInfoUpdatesRequested;
 
         static void notificationCallback(
             void* ctx,
-           const JkBmsDataBuffer_C data);
-        void handleResponse(const JkBmsDataBuffer_C data);
+           const JkBmsDataBuffer data);
+        void handleResponse(const JkBmsDataBuffer data);
+        // Ask BMS to start cell info periodic updates
+        ControllerError requestCellInfoUpdates() noexcept;
+        void handleCellInfoResponse(const JkBmsDataBuffer data) noexcept;
     public:
         Controller(Log& logger = (Log&)dumpLogInstance);
         virtual void start(Source* source);
@@ -73,6 +85,7 @@ namespace JkBmsCpp {
         ~Controller();
         virtual DeviceInfoFuture readDeviceState();
         virtual CellInfoFuture readCellsState();
+        // virtual flow::StateFlow<CellInfoResponse> observeCellInfoState();
     private:
         static DumpLog dumpLogInstance;
     };

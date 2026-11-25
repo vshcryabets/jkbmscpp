@@ -3,9 +3,9 @@
 
 namespace JkBmsCpp {
 
-    Expected<CellInfoResponse, ControllerError_C> 
+    Expected<CellInfoResponse, ControllerError> 
     parseCellsInfo(
-        const JkBmsDataBuffer_C buffer,
+        const JkBmsDataBuffer buffer,
         uint8_t cellCount
     ) {
         if (!checkFrameStart(buffer)) {
@@ -79,8 +79,8 @@ namespace JkBmsCpp {
         return response;
     }
 
-    Expected<DeviceInfoResponse, ControllerError_C> parseDeviceInfo(
-        const JkBmsDataBuffer_C buffer) {
+    Expected<DeviceInfoResponse, ControllerError> parseDeviceInfo(
+        const JkBmsDataBuffer buffer) {
         if (!checkFrameStart(buffer)) {
             return CONTROLLER_ERROR_INVALID_MAGIC_BYTES;
         }
@@ -111,8 +111,8 @@ namespace JkBmsCpp {
         return response;
     }
 
-    Expected<ResponseType, ControllerError_C> getResponseType(
-        const JkBmsDataBuffer_C buffer
+    Expected<ResponseType, ControllerError> getResponseType(
+        const JkBmsDataBuffer buffer
     ) {
         if (!checkFrameStart(buffer)) {
             return CONTROLLER_ERROR_INVALID_MAGIC_BYTES;

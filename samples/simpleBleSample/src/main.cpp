@@ -129,7 +129,7 @@ int main() {
                     auto cellsInfo = fut.get();
 
                     std::cout << "Cells Info:" << std::endl;
-                    for (size_t cell = 0; cell < JkBmsCpp::CellInfoResponse::CELL_COUNT; cell++) {
+                    for (size_t cell = 0; cell < JK_BMS_STRUCTURE_CELLS_COUNT; cell++) {
                         if (cellsInfo.value().cellVoltages_mV[cell] == 0) {
                             break;
                         }

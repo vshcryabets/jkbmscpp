@@ -82,7 +82,6 @@ namespace JkBmsCpp {
 
     typedef std::vector<uint8_t> JkBmsByteBuffer;
     
-    typedef ::JkBmsDataBuffer_C JkBmsDataBuffer_C;
     typedef ::UuidStr UuidStr;
 
     class Log {
