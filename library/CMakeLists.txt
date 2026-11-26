@@ -33,6 +33,7 @@ endif()
 if(BUILD_TESTS)
     add_executable(library_test
         test/testJkBmsFrames.cpp
+        test/testStateFlowImpl.cpp
         )
     target_include_directories(library_test PRIVATE ./include/)
     target_link_libraries(library_test PRIVATE Catch2::Catch2WithMain libjkbmscpp)

@@ -17,9 +17,10 @@ namespace flow {
 
     /// @brief Specialization for types that have operator== and operator!=
     template <typename T>
-    struct has_equality_operators<T, std::void_t<
-        decltype(std::declval<const T&>() == std::declval<const T&>()),
-        decltype(std::declval<const T&>() != std::declval<const T&>()) >> : std::true_type {};
+    struct has_equality_operators<T, typename std::enable_if<
+        std::is_same<decltype(std::declval<const T&>() == std::declval<const T&>()), bool>::value &&
+        std::is_same<decltype(std::declval<const T&>() != std::declval<const T&>()), bool>::value
+    >::type> : std::true_type {};
 
     /// @brief Helper variable template for has_equality_operators
     template <typename T>
@@ -147,11 +148,12 @@ namespace flow {
         /// it hasn't changed since subscription).
         /// 
         /// Thread-safe and safe to call concurrently with other operations.
-        /// Does nothing if listener is null.
+        /// Returns false if listener is null, true on successful subscription.
         /// 
         /// @param listener Pointer to the listener to subscribe. Must not be null
         ///                 and must remain valid until unsubscribe() is called.
-        virtual void subscribe(StateListener<StateType>* listener) = 0;
+        /// @return true if subscription was successful, false if listener is null
+        virtual bool subscribe(StateListener<StateType>* listener) = 0;
 
         /// @brief Unsubscribes a listener from state changes
         /// 
@@ -228,34 +230,41 @@ namespace flow {
 
         StateType state() const noexcept override
         {
-            std::lock_guard lock(storage_->state_mutex);
+            std::lock_guard<std::mutex> lock(storage_->state_mutex);
             return storage_->state;
         }
 
-        void subscribe(StateListener<StateType>* listener) override
+        bool subscribe(StateListener<StateType>* listener) override
         {
-            if (!listener) return;
+            if (!listener) return false;
             StateType current_state;
             {
-                std::lock_guard lock(storage_->listeners_mutex);
+                std::lock_guard<std::mutex> lock(storage_->listeners_mutex);
                 storage_->listeners.push_back(listener);
             }
             {
-                std::lock_guard lock(storage_->state_mutex);
+                std::lock_guard<std::mutex> lock(storage_->state_mutex);
                 current_state = storage_->state;
             }
             listener->on_state_changed(current_state);
+            return true;
         }
 
         void unsubscribe(StateListener<StateType>* listener) override
         {
+            if (!listener) return;
             bool was_last_listener = false;
+            bool was_found_in_subscribers = false;
             {
-                std::lock_guard lock(storage_->listeners_mutex);
+                std::lock_guard<std::mutex> lock(storage_->listeners_mutex);
                 storage_->listeners.erase(
                     std::remove_if(storage_->listeners.begin(), storage_->listeners.end(), 
                     [&](const StateListener<StateType>* existing) {
-                        return existing == listener;
+                        if (existing == listener) {
+                            was_found_in_subscribers = true;
+                            return true;
+                        }
+                        return false;
                     }),
                     storage_->listeners.end());
                 
@@ -264,7 +273,7 @@ namespace flow {
             }
             
             // Notify unsubscribe listener (outside the lock to avoid deadlocks)
-            if (storage_->unsubscribe_listener) {
+            if (storage_->unsubscribe_listener && was_found_in_subscribers) {
                 storage_->unsubscribe_listener->onUnsubscribe(listener);
                 if (was_last_listener) {
                     storage_->unsubscribe_listener->onLastUnsubscribe();
@@ -276,7 +285,7 @@ namespace flow {
         {
             bool has_changes = false;
             {
-                std::lock_guard lock(storage_->state_mutex);
+                std::lock_guard<std::mutex> lock(storage_->state_mutex);
                 if (new_state != storage_->state)
                 {
                     storage_->state = new_state;
@@ -328,7 +337,7 @@ namespace flow {
             bool has_changes = false;
             std::optional<StateType> snapshot;
             {
-                std::lock_guard lock(storage_->state_mutex);
+                std::lock_guard<std::mutex> lock(storage_->state_mutex);
                 const StateType next_state = updater(storage_->state);
                 if (next_state != storage_->state)
                 {
@@ -361,7 +370,7 @@ namespace flow {
             std::vector<StateListener<StateType>*> listeners_copy;
             
             {
-                std::lock_guard lock(storage_->listeners_mutex);
+                std::lock_guard<std::mutex> lock(storage_->listeners_mutex);
                 listeners_copy = storage_->listeners;
             }
 
