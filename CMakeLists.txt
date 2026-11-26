@@ -13,6 +13,7 @@ option(BUILD_TESTS "Build and run tests" ON)
 option(BUILD_SIMPLE_BLE_SAMPLE "Build simpleBleSample" ON)
 option(BUILD_UI_SIMPLE_BLE_SAMPLE "Build uiSimpleBleSample" ON)
 option(USE_STD_STRING "Use std::string instead of custom JkBmsString" ON)
+option(USE_STATEFLOW "Use StateFlow for cell info state observation" ON)
 
 include(FetchContent)
 
@@ -72,4 +73,5 @@ message(STATUS "  Tests:                ${BUILD_TESTS}")
 message(STATUS "  simpleBleSample:      ${BUILD_SIMPLE_BLE_SAMPLE}")
 message(STATUS "  uiSimpleBleSample:    ${BUILD_UI_SIMPLE_BLE_SAMPLE}")
 message(STATUS "  Use std::string:      ${USE_STD_STRING}")
+message(STATUS "  Use StateFlow:        ${USE_STATEFLOW}")
 message(STATUS "")

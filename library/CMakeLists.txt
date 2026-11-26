@@ -25,6 +25,9 @@ target_sources(libjkbmscpp PRIVATE
     src/CFunctions.c
 )
 
+if (USE_STATEFLOW)
+    target_compile_definitions(libjkbmscpp PUBLIC JKBMSCPP_USE_STATEFLOW)
+endif()
 if(USE_STD_STRING)
     target_compile_definitions(libjkbmscpp PUBLIC JKBMSCPP_USE_STD_STRING)
 endif()

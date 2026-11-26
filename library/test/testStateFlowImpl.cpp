@@ -5,8 +5,10 @@
 #include <mutex>
 
 #include "stateflow.h"
+#include "JkBmsFrames.h"
 
 using namespace flow;
+using namespace JkBmsCpp;
 
 // Simple test state type with equality operators
 struct SimpleState {
@@ -686,5 +688,145 @@ TEST_CASE("StateFlowImpl stress test", "[StateFlowImpl]") {
         }
 
         REQUIRE(flow.state().value == thread_count * iterations);
+    }
+}
+
+TEST_CASE("CellInfo equality operators", "[CellInfo]") {
+    SECTION("default constructed CellInfo are equal") {
+        CellInfo ci1, ci2;
+        REQUIRE(ci1 == ci2);
+        REQUIRE(!(ci1 != ci2));
+    }
+
+    SECTION("CellInfo with same values are equal") {
+        CellInfo ci1, ci2;
+        ci1.data.batteryVoltage_mV = 48000;
+        ci1.data.batteryPercentage = 100;
+        ci1.data.chargeCurrent_mA = 1000;
+        
+        ci2.data.batteryVoltage_mV = 48000;
+        ci2.data.batteryPercentage = 100;
+        ci2.data.chargeCurrent_mA = 1000;
+
+        REQUIRE(ci1 == ci2);
+        REQUIRE(!(ci1 != ci2));
+    }
+
+    SECTION("CellInfo with different voltage are not equal") {
+        CellInfo ci1, ci2;
+        ci1.data.batteryVoltage_mV = 48000;
+        ci2.data.batteryVoltage_mV = 48500;
+
+        REQUIRE(ci1 != ci2);
+        REQUIRE(!(ci1 == ci2));
+    }
+
+    SECTION("CellInfo with different percentage are not equal") {
+        CellInfo ci1, ci2;
+        ci1.data.batteryPercentage = 100;
+        ci2.data.batteryPercentage = 99;
+
+        REQUIRE(ci1 != ci2);
+    }
+
+    SECTION("CellInfo with different cell voltages are not equal") {
+        CellInfo ci1, ci2;
+        ci1.data.cellVoltages_mV[0] = 3800;
+        ci2.data.cellVoltages_mV[0] = 3900;
+
+        REQUIRE(ci1 != ci2);
+    }
+}
+
+TEST_CASE("CellInfo conversion from C struct", "[CellInfo]") {
+    SECTION("construct from C struct") {
+        CellInfoResponse c_response{};
+        c_response.batteryVoltage_mV = 48000;
+        c_response.batteryPercentage = 85;
+        c_response.chargeCurrent_mA = -500;
+        c_response.cellVoltages_mV[0] = 3800;
+        c_response.cellVoltages_mV[5] = 3750;
+
+        CellInfo ci(c_response);
+
+        REQUIRE(ci.data.batteryVoltage_mV == 48000);
+        REQUIRE(ci.data.batteryPercentage == 85);
+        REQUIRE(ci.data.chargeCurrent_mA == -500);
+        REQUIRE(ci.data.cellVoltages_mV[0] == 3800);
+        REQUIRE(ci.data.cellVoltages_mV[5] == 3750);
+    }
+
+    SECTION("assignment operator from C struct") {
+        CellInfoResponse c_response{};
+        c_response.batteryVoltage_mV = 50000;
+        c_response.batteryPercentage = 95;
+
+        CellInfo ci;
+        ci = c_response;
+
+        REQUIRE(ci.data.batteryVoltage_mV == 50000);
+        REQUIRE(ci.data.batteryPercentage == 95);
+    }
+
+    SECTION("conversion operator to C struct") {
+        CellInfo ci;
+        ci.data.batteryVoltage_mV = 42000;
+        ci.data.batteryPercentage = 50;
+        ci.data.cellVoltages_mV[0] = 3100;
+
+        CellInfoResponse c_response = ci.data;
+
+        REQUIRE(c_response.batteryVoltage_mV == 42000);
+        REQUIRE(c_response.batteryPercentage == 50);
+        REQUIRE(c_response.cellVoltages_mV[0] == 3100);
+    }
+}
+
+TEST_CASE("CellInfo with StateFlow", "[CellInfo]") {
+    SECTION("CellInfo can be used with StateFlow") {
+        StateFlowImpl<CellInfo> flow(CellInfo{});
+        
+        CellInfo state1;
+        state1.data.batteryPercentage = 100;
+        
+        REQUIRE(flow.state().data.batteryPercentage == 0);
+        
+        flow.emit(state1);
+        
+        REQUIRE(flow.state().data.batteryPercentage == 100);
+    }
+
+    SECTION("CellInfo state changes trigger listeners") {
+        StateFlowImpl<CellInfo> flow(CellInfo{});
+        TestListener<CellInfo> listener;
+        
+        REQUIRE(flow.subscribe(&listener));
+        
+        CellInfo state1;
+        state1.data.batteryPercentage = 85;
+        state1.data.batteryVoltage_mV = 48000;
+        
+        flow.emit(state1);
+        
+        REQUIRE(listener.last_state().data.batteryPercentage == 85);
+        REQUIRE(listener.last_state().data.batteryVoltage_mV == 48000);
+    }
+
+    SECTION("duplicate CellInfo state does not notify") {
+        StateFlowImpl<CellInfo> flow(CellInfo{});
+        TestListener<CellInfo> listener;
+        
+        REQUIRE(flow.subscribe(&listener));
+        listener.call_count = 0;
+        
+        CellInfo state1;
+        state1.data.batteryPercentage = 75;
+        
+        flow.emit(state1);
+        REQUIRE(listener.call_count == 1);
+        
+        // Emit same state again
+        flow.emit(state1);
+        REQUIRE(listener.call_count == 1);  // No new notification
     }
 }

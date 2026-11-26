@@ -8,7 +8,10 @@
 #include "JkBmsFrames.h"
 #include "CppWrappers.h"
 #include "CFunctions.h"
+
+#ifdef JKBMSCPP_USE_STATEFLOW
 #include "stateflow.h"
+#endif
 
 namespace JkBmsCpp {
     constexpr static uint8_t DEVICE_INFO_REGISTER = 0x97;
@@ -70,13 +73,17 @@ namespace JkBmsCpp {
         std::unique_ptr<DeviceInfoPromise> pendingDeviceInfoRequest;
         std::unique_ptr<CellInfoPromise> pendingCellInfoRequest;
         std::atomic<bool> cellInfoUpdatesRequested;
+#ifdef JKBMSCPP_USE_STATEFLOW
+        std::shared_ptr<flow::StateFlowImpl<CellInfo>> cellInfoStateFlow;
+#endif        
 
         static void notificationCallback(
             void* ctx,
            const JkBmsDataBuffer data);
-        void handleResponse(const JkBmsDataBuffer data);
+        void handleResponse(const JkBmsDataBuffer data) noexcept;
         // Ask BMS to start cell info periodic updates
-        ControllerError requestCellInfoUpdates() noexcept;
+        ControllerError requestCellInfoPeriodicUpdates() noexcept;
+        void handleDeviceInfoResponse(const JkBmsDataBuffer data) noexcept;
         void handleCellInfoResponse(const JkBmsDataBuffer data) noexcept;
     public:
         Controller(Log& logger = (Log&)dumpLogInstance);
@@ -85,9 +92,12 @@ namespace JkBmsCpp {
         ~Controller();
         virtual DeviceInfoFuture readDeviceState();
         virtual CellInfoFuture readCellsState();
-        // virtual flow::StateFlow<CellInfoResponse> observeCellInfoState();
+#ifdef JKBMSCPP_USE_STATEFLOW
+        virtual std::shared_ptr<flow::StateFlow<CellInfo>> observeCellInfoState();
+#endif
     private:
         static DumpLog dumpLogInstance;
-    };
 
 };
+
+} // namespace JkBmsCpp

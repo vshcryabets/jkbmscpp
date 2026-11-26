@@ -12,7 +12,12 @@ UuidStr Controller::CHARACTERISTIC_UUID = {'0','0','0','0','f','f','e','1','-','
 
 DumpLog Controller::dumpLogInstance;
 
-Controller::Controller(Log& logger) : source(nullptr), log(logger)
+Controller::Controller(Log& logger) : 
+    source(nullptr),
+#ifdef JKBMSCPP_USE_STATEFLOW
+    cellInfoStateFlow(std::make_shared<flow::StateFlowImpl<CellInfo>>(CellInfo{})),
+#endif    
+    log(logger)
 {
     responseBuffer.reserve(MAX_PACKET_SIZE);
 }
@@ -44,7 +49,7 @@ void Controller::end()
     }
 }
 
-ControllerError Controller::requestCellInfoUpdates() noexcept {
+ControllerError Controller::requestCellInfoPeriodicUpdates() noexcept {
     if (cellInfoUpdatesRequested) {
         log.info("Cell info updates already requested");
         return CONTROLLER_ERROR_SUCCESS;
@@ -67,7 +72,7 @@ ControllerError Controller::requestCellInfoUpdates() noexcept {
 
 CellInfoFuture Controller::readCellsState() {
     pendingCellInfoRequest = std::make_unique<CellInfoPromise>();
-    auto result = requestCellInfoUpdates();
+    auto result = requestCellInfoPeriodicUpdates();
     if (result != CONTROLLER_ERROR_SUCCESS) {
         pendingCellInfoRequest->set_value(
             Expected<CellInfoResponse, ControllerError>(
@@ -101,7 +106,8 @@ void Controller::notificationCallback(
     controller->handleResponse(data);
 }
 
-void Controller::handleResponse(const JkBmsDataBuffer data) {
+void Controller::handleResponse(const JkBmsDataBuffer data) noexcept {
+    try {
     log.info("Received %u bytes", data.len);
     dumpDataToLog(data.ptr, data.len, log);
     if (checkFrameStart(data)) {
@@ -128,20 +134,13 @@ void Controller::handleResponse(const JkBmsDataBuffer data) {
             case ResponseType::DEVICE_INFO:
                 {
                     JkBmsDataBuffer deviceBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
-                    handleCellInfoResponse(deviceBuffer);
+                    handleDeviceInfoResponse(deviceBuffer);
                 }
                 break;
             case ResponseType::CELL_INFO:
                 {
-                    if (pendingCellInfoRequest) {
-                        JkBmsDataBuffer cellBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
-                        auto cellInfo = parseCellsInfo(
-                            cellBuffer,
-                            JK_BMS_STRUCTURE_CELLS_COUNT
-                        );
-                        pendingCellInfoRequest->set_value(cellInfo);
-                        pendingCellInfoRequest.reset();
-                    }
+                    JkBmsDataBuffer cellBuffer = {responseBuffer.data(), (uint16_t)responseBuffer.size()};
+                    handleCellInfoResponse(cellBuffer);
                 }
                 break;
             default:
@@ -150,9 +149,14 @@ void Controller::handleResponse(const JkBmsDataBuffer data) {
             responseBuffer.clear();
         }
     }
+    } catch (const std::exception& e) {
+        log.error("Exception in handleResponse: %s: %s", typeid(e).name(), e.what());
+    } catch (...) {
+        log.error("Unknown exception in handleResponse");
+    }
 }
 
-void Controller::handleCellInfoResponse(const ::JkBmsDataBuffer data) noexcept
+void Controller::handleDeviceInfoResponse(const ::JkBmsDataBuffer data) noexcept
 {
     auto deviceInfo = parseDeviceInfo(data);
     if (pendingDeviceInfoRequest) {                        
@@ -160,5 +164,27 @@ void Controller::handleCellInfoResponse(const ::JkBmsDataBuffer data) noexcept
         pendingDeviceInfoRequest.reset();
     }
 }
+
+void Controller::handleCellInfoResponse(const JkBmsDataBuffer data) noexcept
+{
+    auto cellInfo = parseCellsInfo(data, JK_BMS_STRUCTURE_CELLS_COUNT);
+    
+    if (pendingCellInfoRequest) {
+        pendingCellInfoRequest->set_value(cellInfo);
+        pendingCellInfoRequest.reset();
+    }
+
+#ifdef JKBMSCPP_USE_STATEFLOW
+    if (cellInfo.has_value()) {
+        cellInfoStateFlow->emit(CellInfo(cellInfo.value()));
+    }
+#endif
+}
+
+#ifdef JKBMSCPP_USE_STATEFLOW
+std::shared_ptr<flow::StateFlow<CellInfo>> Controller::observeCellInfoState() {
+    return cellInfoStateFlow;
+}
+#endif
 
 } // namespace JkBmsCpp
