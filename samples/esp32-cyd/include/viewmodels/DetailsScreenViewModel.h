@@ -18,6 +18,7 @@ class DetailsScreenViewModel : public ViewModelAbstract<DetailsScreenState>
 private:
   NavigationController &navigationController;
   // JkBms::Source* jkbmsSource;
+  JkBmsCpp::DumpLog dumpLog;
   JkBmsCpp::Controller jkbmsController;
 
 public:

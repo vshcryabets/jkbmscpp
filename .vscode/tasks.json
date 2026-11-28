@@ -8,7 +8,7 @@
                 "-B",
                 "${workspaceFolder}/build",
                 "-S",
-                "${workspaceFolder}/samples/simpleBleSample",
+                "${workspaceFolder}/",
                 "-DCMAKE_BUILD_TYPE=Debug"
             ],
             "group": {

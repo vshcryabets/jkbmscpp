@@ -1,0 +1,82 @@
+#pragma once
+
+#include <vector>
+#include <string>
+#include <cstdint>
+#include <map>
+#include "stateflow.h"
+
+using BleAdapterId = int16_t;
+using PeripheralId = std::string;
+
+enum class ConnectionResult : uint8_t {
+    Success = 0,
+    AdapterNotFound = 1,
+    PeripheralNotFound = 2,
+    AlreadyConnected = 3,
+    UnknownError = 4
+};
+
+struct Peripheral {
+    PeripheralId id;
+    std::string name;
+    int rssi;
+
+    bool operator==(const Peripheral& other) const {
+        return id == other.id && 
+            name == other.name && 
+            rssi == other.rssi;
+    }
+};
+
+struct JkbmsState {
+    std::string vendorId;
+    std::string hwVersion;
+    std::string swVersion;
+    uint32_t uptimeSeconds;
+    std::string deviceName;
+    std::string serialNumber;
+    uint8_t chargePercentage;
+    uint32_t remainingCapacity_mAh;
+    uint32_t fullCapacity_mAh;
+    uint32_t batteryVoltage_mV;
+    uint32_t batteryPower_mW;
+    int32_t chargeCurrent_mA;
+
+    bool operator==(const JkbmsState& other) const {
+        return vendorId == other.vendorId &&
+               hwVersion == other.hwVersion &&
+               swVersion == other.swVersion &&
+               uptimeSeconds == other.uptimeSeconds &&
+               deviceName == other.deviceName &&
+               serialNumber == other.serialNumber &&
+               chargePercentage == other.chargePercentage &&
+               remainingCapacity_mAh == other.remainingCapacity_mAh &&
+               fullCapacity_mAh == other.fullCapacity_mAh &&
+               batteryVoltage_mV == other.batteryVoltage_mV &&
+               batteryPower_mW == other.batteryPower_mW &&
+               chargeCurrent_mA == other.chargeCurrent_mA;
+    }
+
+    bool operator!=(const JkbmsState& other) const {
+        return !(*this == other);
+    }
+};
+
+class BleRepo {
+public:
+    virtual ~BleRepo() = default;
+    
+    virtual std::vector<BleAdapterId> getAdapters() = 0;
+    virtual std::string getAdapterName(BleAdapterId adapterId) = 0;
+    virtual std::string getAdapterIdentifier(BleAdapterId adapterId) = 0;
+    virtual void startScan(BleAdapterId adapterId) = 0;
+    virtual void stopScan(BleAdapterId adapterId) = 0;
+    virtual Peripheral getPeripheral(BleAdapterId adapterId, PeripheralId id) = 0;
+    virtual std::vector<Peripheral> getScanResults(BleAdapterId adapterId) = 0;
+    virtual flow::StateFlow<std::vector<Peripheral>>& getScanFlow(BleAdapterId adapterId) = 0;
+    
+    virtual ConnectionResult startConnection(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
+    virtual void stopConnection(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
+    virtual flow::StateFlow<JkbmsState>* getBmsState(BleAdapterId adapterId, PeripheralId peripheralId) = 0;
+};
